@@ -8,6 +8,7 @@ use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
+use crate::i18n::t;
 use crate::{Table, values};
 
 const BATCH_ROWS: usize = 8192;
@@ -31,7 +32,7 @@ pub enum Exported {
 /// written.
 pub fn csv(table: &Table, columns: &[usize], to: &Path, progress: &AtomicU64, cancel: &AtomicBool) -> Result<Exported, String> {
     if same_file(table.path(), to) {
-        return Err("An export cannot replace the file it is read from.".to_owned());
+        return Err(t("An export cannot replace the file it is read from.").to_owned());
     }
     let partial = partial_path(to);
     let result = write(table, columns, &partial, progress, cancel);

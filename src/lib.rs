@@ -7,6 +7,13 @@
 #![warn(clippy::pedantic)]
 
 mod blocks;
+
+/// The messages Parkett shows, in the language the desktop asks for.
+pub mod i18n {
+    pub use potext::fill;
+
+    potext::catalog!();
+}
 pub mod copy;
 pub mod export;
 mod footer;

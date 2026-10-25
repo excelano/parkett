@@ -1,0 +1,251 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the parkett package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: parkett\n"
+"Report-Msgid-Bugs-To: https://github.com/excelano/parkett/issues\n"
+"POT-Creation-Date: 2026-10-24 23:11-0500\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: src/copy.rs:31
+msgid "{cells} cell is more than one copy carries; select fewer."
+msgid_plural "{cells} cells is more than one copy carries; select fewer."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/export.rs:35
+msgid "An export cannot replace the file it is read from."
+msgstr ""
+
+#: src/main.rs:160 src/main.rs:421
+msgid "File"
+msgstr ""
+
+#: src/main.rs:161
+msgid "Open…"
+msgstr ""
+
+#: src/main.rs:166
+msgid "Export as CSV…"
+msgstr ""
+
+#: src/main.rs:171
+msgid "Export selected columns as CSV…"
+msgstr ""
+
+#: src/main.rs:175
+msgid "Quit"
+msgstr ""
+
+#: src/main.rs:179
+msgid "View"
+msgstr ""
+
+#: src/main.rs:180
+msgid "File details"
+msgstr ""
+
+#: src/main.rs:193
+msgid "Open a Parquet file…"
+msgstr ""
+
+#: src/main.rs:205
+msgid "This is not a Parquet file Parkett can read: {error}"
+msgstr ""
+
+#: src/main.rs:261
+msgid "Export as CSV"
+msgstr ""
+
+#: src/main.rs:263
+msgid "CSV files"
+msgstr ""
+
+#: src/main.rs:301
+msgid "Open a Parquet file"
+msgstr ""
+
+#: src/main.rs:302
+msgid "Parquet files"
+msgstr ""
+
+#: src/main.rs:303
+msgid "All files"
+msgstr ""
+
+#: src/main.rs:337
+msgid "Exporting to {name}"
+msgstr ""
+
+#: src/main.rs:339
+msgid "{done} of {rows} row"
+msgid_plural "{done} of {rows} rows"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/main.rs:341
+msgid "Cancel"
+msgstr ""
+
+#: src/main.rs:348
+msgid "Exported {rows} row to {path}"
+msgid_plural "Exported {rows} rows to {path}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/main.rs:352
+msgid "Export cancelled; nothing was written."
+msgstr ""
+
+#: src/main.rs:354
+msgid "The export failed: {error}"
+msgstr ""
+
+#: src/main.rs:358
+msgid "Open"
+msgstr ""
+
+#: src/main.rs:361
+msgid "Dismiss"
+msgstr ""
+
+#: src/main.rs:363
+msgid "It could not be opened: {error}"
+msgstr ""
+
+#: src/main.rs:385
+msgid "Row {row}"
+msgstr ""
+
+#: src/main.rs:391
+msgid "{rows} row"
+msgid_plural "{rows} rows"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/main.rs:392
+msgid "{columns} column"
+msgid_plural "{columns} columns"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/main.rs:395
+msgid "· {rows} × {columns} selected"
+msgstr ""
+
+#: src/main.rs:404
+msgid "Reading…"
+msgstr ""
+
+#: src/main.rs:413
+msgid "This block could not be read: {error}"
+msgstr ""
+
+#: src/main.rs:423
+msgid "Rows"
+msgstr ""
+
+#: src/main.rs:426 src/main.rs:467
+msgid "Row groups"
+msgstr ""
+
+#: src/main.rs:431
+msgid "Data"
+msgstr ""
+
+#: src/main.rs:432
+msgid "{compressed} compressed, {uncompressed} uncompressed"
+msgstr ""
+
+#: src/main.rs:436
+msgid "Written by"
+msgstr ""
+
+#: src/main.rs:443
+msgid "Schema"
+msgstr ""
+
+#: src/main.rs:449
+msgid "Columns"
+msgstr ""
+
+#: src/main.rs:451
+msgid "Codec"
+msgstr ""
+
+#: src/main.rs:451 src/main.rs:475
+msgid "Column"
+msgstr ""
+
+#: src/main.rs:451
+msgid "Compressed"
+msgstr ""
+
+#: src/main.rs:451
+msgid "Encodings"
+msgstr ""
+
+#: src/main.rs:451 src/main.rs:475
+msgid "Nulls"
+msgstr ""
+
+#: src/main.rs:451
+msgid "Uncompressed"
+msgstr ""
+
+#: src/main.rs:470
+msgid "{index}: {rows} row, {size}"
+msgid_plural "{index}: {rows} rows, {size}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/main.rs:475
+msgid "Maximum"
+msgstr ""
+
+#: src/main.rs:475
+msgid "Minimum"
+msgstr ""
+
+#: src/main.rs:492
+msgid "Metadata"
+msgstr ""
+
+#: src/main.rs:507
+msgid "nullable"
+msgstr ""
+
+#: src/main.rs:508
+msgid "repeated"
+msgstr ""
+
+#. Translators: what sets thousands apart in a count, as in 5,000,000.
+#: src/main.rs:530
+msgctxt "digit grouping"
+msgid ","
+msgstr ""
+
+#. Translators: the decimal point in a size, as in 1.5 MB.
+#: src/main.rs:551
+msgctxt "decimal point"
+msgid "."
+msgstr ""
+
+#: src/values.rs:175
+msgid "({type} is not shown)"
+msgstr ""
+
+#: src/values.rs:180 src/values.rs:225
+msgid "(out of range)"
+msgstr ""

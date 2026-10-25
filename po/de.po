@@ -1,0 +1,250 @@
+# German translation for Parkett.
+# Copyright (C) 2026 David M. Anderson
+# This file is distributed under the same licence as the parkett package.
+# David M. Anderson <david.anderson@excelano.com>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: parkett\n"
+"Report-Msgid-Bugs-To: https://github.com/excelano/parkett/issues\n"
+"POT-Creation-Date: 2026-10-24 23:11-0500\n"
+"PO-Revision-Date: 2026-10-24 23:11-0500\n"
+"Last-Translator: David M. Anderson <david.anderson@excelano.com>\n"
+"Language-Team: German\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: src/copy.rs:31
+msgid "{cells} cell is more than one copy carries; select fewer."
+msgid_plural "{cells} cells is more than one copy carries; select fewer."
+msgstr[0] "{cells} Zelle ist mehr, als eine Kopie fasst; wählen Sie weniger aus."
+msgstr[1] "{cells} Zellen sind mehr, als eine Kopie fasst; wählen Sie weniger aus."
+
+#: src/export.rs:35
+msgid "An export cannot replace the file it is read from."
+msgstr "Ein Export kann die Datei, aus der er liest, nicht ersetzen."
+
+#: src/main.rs:160 src/main.rs:421
+msgid "File"
+msgstr "Datei"
+
+#: src/main.rs:161
+msgid "Open…"
+msgstr "Öffnen …"
+
+#: src/main.rs:166
+msgid "Export as CSV…"
+msgstr "Als CSV exportieren …"
+
+#: src/main.rs:171
+msgid "Export selected columns as CSV…"
+msgstr "Ausgewählte Spalten als CSV exportieren …"
+
+#: src/main.rs:175
+msgid "Quit"
+msgstr "Beenden"
+
+#: src/main.rs:179
+msgid "View"
+msgstr "Ansicht"
+
+#: src/main.rs:180
+msgid "File details"
+msgstr "Dateidetails"
+
+#: src/main.rs:193
+msgid "Open a Parquet file…"
+msgstr "Eine Parquet-Datei öffnen …"
+
+#: src/main.rs:205
+msgid "This is not a Parquet file Parkett can read: {error}"
+msgstr "Dies ist keine Parquet-Datei, die Parkett lesen kann: {error}"
+
+#: src/main.rs:261
+msgid "Export as CSV"
+msgstr "Als CSV exportieren"
+
+#: src/main.rs:263
+msgid "CSV files"
+msgstr "CSV-Dateien"
+
+#: src/main.rs:301
+msgid "Open a Parquet file"
+msgstr "Eine Parquet-Datei öffnen"
+
+#: src/main.rs:302
+msgid "Parquet files"
+msgstr "Parquet-Dateien"
+
+#: src/main.rs:303
+msgid "All files"
+msgstr "Alle Dateien"
+
+#: src/main.rs:337
+msgid "Exporting to {name}"
+msgstr "Wird nach {name} exportiert"
+
+#: src/main.rs:339
+msgid "{done} of {rows} row"
+msgid_plural "{done} of {rows} rows"
+msgstr[0] "{done} von {rows} Zeile"
+msgstr[1] "{done} von {rows} Zeilen"
+
+#: src/main.rs:341
+msgid "Cancel"
+msgstr "Abbrechen"
+
+#: src/main.rs:348
+msgid "Exported {rows} row to {path}"
+msgid_plural "Exported {rows} rows to {path}"
+msgstr[0] "{rows} Zeile nach {path} exportiert"
+msgstr[1] "{rows} Zeilen nach {path} exportiert"
+
+#: src/main.rs:352
+msgid "Export cancelled; nothing was written."
+msgstr "Export abgebrochen; es wurde nichts geschrieben."
+
+#: src/main.rs:354
+msgid "The export failed: {error}"
+msgstr "Der Export ist fehlgeschlagen: {error}"
+
+#: src/main.rs:358
+msgid "Open"
+msgstr "Öffnen"
+
+#: src/main.rs:361
+msgid "Dismiss"
+msgstr "Schließen"
+
+#: src/main.rs:363
+msgid "It could not be opened: {error}"
+msgstr "Die Datei konnte nicht geöffnet werden: {error}"
+
+#: src/main.rs:385
+msgid "Row {row}"
+msgstr "Zeile {row}"
+
+#: src/main.rs:391
+msgid "{rows} row"
+msgid_plural "{rows} rows"
+msgstr[0] "{rows} Zeile"
+msgstr[1] "{rows} Zeilen"
+
+#: src/main.rs:392
+msgid "{columns} column"
+msgid_plural "{columns} columns"
+msgstr[0] "{columns} Spalte"
+msgstr[1] "{columns} Spalten"
+
+#: src/main.rs:395
+msgid "· {rows} × {columns} selected"
+msgstr "· {rows} × {columns} ausgewählt"
+
+#: src/main.rs:404
+msgid "Reading…"
+msgstr "Wird gelesen …"
+
+#: src/main.rs:413
+msgid "This block could not be read: {error}"
+msgstr "Dieser Block konnte nicht gelesen werden: {error}"
+
+#: src/main.rs:423
+msgid "Rows"
+msgstr "Zeilen"
+
+#: src/main.rs:426 src/main.rs:467
+msgid "Row groups"
+msgstr "Zeilengruppen"
+
+#: src/main.rs:431
+msgid "Data"
+msgstr "Daten"
+
+#: src/main.rs:432
+msgid "{compressed} compressed, {uncompressed} uncompressed"
+msgstr "{compressed} komprimiert, {uncompressed} unkomprimiert"
+
+#: src/main.rs:436
+msgid "Written by"
+msgstr "Geschrieben von"
+
+#: src/main.rs:443
+msgid "Schema"
+msgstr "Schema"
+
+#: src/main.rs:449
+msgid "Columns"
+msgstr "Spalten"
+
+#: src/main.rs:451
+msgid "Codec"
+msgstr "Codec"
+
+#: src/main.rs:451 src/main.rs:475
+msgid "Column"
+msgstr "Spalte"
+
+#: src/main.rs:451
+msgid "Compressed"
+msgstr "Komprimiert"
+
+#: src/main.rs:451
+msgid "Encodings"
+msgstr "Kodierungen"
+
+#: src/main.rs:451 src/main.rs:475
+msgid "Nulls"
+msgstr "Nullwerte"
+
+#: src/main.rs:451
+msgid "Uncompressed"
+msgstr "Unkomprimiert"
+
+#: src/main.rs:470
+msgid "{index}: {rows} row, {size}"
+msgid_plural "{index}: {rows} rows, {size}"
+msgstr[0] "{index}: {rows} Zeile, {size}"
+msgstr[1] "{index}: {rows} Zeilen, {size}"
+
+#: src/main.rs:475
+msgid "Maximum"
+msgstr "Maximum"
+
+#: src/main.rs:475
+msgid "Minimum"
+msgstr "Minimum"
+
+#: src/main.rs:492
+msgid "Metadata"
+msgstr "Metadaten"
+
+#: src/main.rs:507
+msgid "nullable"
+msgstr "Nullwerte zulässig"
+
+#: src/main.rs:508
+msgid "repeated"
+msgstr "wiederholt"
+
+#. Translators: what sets thousands apart in a count, as in 5,000,000.
+#: src/main.rs:530
+msgctxt "digit grouping"
+msgid ","
+msgstr "."
+
+#. Translators: the decimal point in a size, as in 1.5 MB.
+#: src/main.rs:551
+msgctxt "decimal point"
+msgid "."
+msgstr ","
+
+#: src/values.rs:175
+msgid "({type} is not shown)"
+msgstr "({type} wird nicht angezeigt)"
+
+#: src/values.rs:180 src/values.rs:225
+msgid "(out of range)"
+msgstr "(außerhalb des Bereichs)"

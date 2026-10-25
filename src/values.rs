@@ -18,6 +18,8 @@ use arrow_array::types::{
 use arrow_array::{Array, ArrowPrimitiveType};
 use arrow_schema::{DataType, TimeUnit};
 
+use crate::i18n::{fill, t};
+
 /// How a value is written out.
 #[derive(Clone, Copy)]
 struct Form {
@@ -170,12 +172,12 @@ fn scalar(array: &dyn Array, row: usize, form: Form) -> Option<String> {
             };
             shown(duration)
         }
-        other => format!("({other} is not shown)"),
+        other => fill(t("({type} is not shown)"), &[("type", &other.to_string())]),
     })
 }
 
 fn shown<T: std::fmt::Display>(value: Option<T>) -> String {
-    value.map_or_else(|| "(out of range)".to_owned(), |v| v.to_string())
+    value.map_or_else(|| t("(out of range)").to_owned(), |v| v.to_string())
 }
 
 /// A timestamp to the precision its unit records.
@@ -220,7 +222,7 @@ fn timestamp(raw: i64, unit: TimeUnit, zone: Option<&str>, iso: bool) -> String 
         TimeUnit::Microsecond => at!(TimestampMicrosecondType),
         TimeUnit::Nanosecond => at!(TimestampNanosecondType),
     };
-    text.unwrap_or_else(|| "(out of range)".to_owned())
+    text.unwrap_or_else(|| t("(out of range)").to_owned())
 }
 
 fn hex(bytes: &[u8]) -> String {

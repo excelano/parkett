@@ -5,6 +5,7 @@
 
 use std::ops::RangeInclusive;
 
+use crate::i18n::{fill, tn};
 use crate::{Blocks, Table, values};
 
 /// The most cells one copy carries; a larger range is an export.
@@ -26,7 +27,12 @@ pub fn tab_separated(
 ) -> Result<String, String> {
     let cells = (rows.end() - rows.start() + 1) * (columns.end() - columns.start() + 1) as u64;
     if cells > COPY_CELLS {
-        return Err(format!("{cells} cells is more than one copy carries; select fewer."));
+        let template = tn(
+            "{cells} cell is more than one copy carries; select fewer.",
+            "{cells} cells is more than one copy carries; select fewer.",
+            cells,
+        );
+        return Err(fill(template, &[("cells", &cells.to_string())]));
     }
     let mut out = String::new();
     for row in rows {

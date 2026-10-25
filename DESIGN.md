@@ -178,3 +178,27 @@ engines that do it in Rust are many times the size of everything else here;
 DuckDB answers those questions from the command line already. It does not open
 a directory of Parquet files as one table, read from object storage, or open
 Arrow, ORC or Avro files.
+
+## §9 Language
+
+Every sentence Parkett shows is looked up in a `.po` catalogue compiled into
+the binary and read by `potext`, so the same mechanism works in a `.deb`, an
+MSIX package and a crate with nothing installed beside it. The language is the
+one the platform names, or `POTEXT_LANG` when it is set, and a language with no
+catalogue is English. A message whose English has changed since it was
+translated is marked fuzzy by `msgmerge`, and `potext` will not show a fuzzy
+entry, so a stale translation falls back to English rather than saying
+something the window no longer means.
+
+What Parkett shows of the file is not translated: values, the `null` mark, the
+type names of §5, codec and encoding names, and the reader's own messages when
+a file cannot be read. Counts and sizes the window writes are grouped and
+pointed the way the language writes them, through two messages keyed by
+context, so German shows 5.000.000 and 1,5 MB.
+
+`po/update-po.sh` re-reads the sources into `po/parkett.pot` and merges it into
+each catalogue; it runs after any change to a sentence a person reads.
+`po/pseudo.sh` writes `po/en-x-pseudo.po`, every message accented, bracketed
+and 40% longer, which debug builds alone compile in: a string still plain
+English never reached the catalogue, and a cut-off label was laid out to the
+width of English.

@@ -16,6 +16,7 @@ use std::time::Duration;
 
 use eframe::egui::{self, Key, KeyboardShortcut, Modifiers, RichText};
 use parkett::export::Exported;
+use parkett::i18n::{self, fill, t, tc, tn};
 use parkett::{Blocks, Field, Footer, Table};
 use parquet::basic::Repetition;
 
@@ -31,6 +32,11 @@ const DETAILS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::COMMAND, Key:
 const QUIT: KeyboardShortcut = KeyboardShortcut::new(Modifiers::COMMAND, Key::Q);
 
 fn main() -> eframe::Result {
+    i18n::activate(&[
+        ("de", include_str!("../po/de.po")),
+        #[cfg(debug_assertions)]
+        ("en-x-pseudo", include_str!("../po/en-x-pseudo.po")),
+    ]);
     let path = std::env::args_os().nth(1).map(PathBuf::from);
 
     let viewport = egui::ViewportBuilder::default()
@@ -151,27 +157,27 @@ impl eframe::App for App {
 
         egui::Panel::top("menu").show(ui, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.add(egui::Button::new("Open…").shortcut_text(ctx.format_shortcut(&OPEN))).clicked() {
+                ui.menu_button(t("File"), |ui| {
+                    if ui.add(egui::Button::new(t("Open…")).shortcut_text(ctx.format_shortcut(&OPEN))).clicked() {
                         self.pick(ctx);
                     }
                     ui.separator();
                     let can = self.can_export();
-                    let all = egui::Button::new("Export as CSV…").shortcut_text(ctx.format_shortcut(&EXPORT));
+                    let all = egui::Button::new(t("Export as CSV…")).shortcut_text(ctx.format_shortcut(&EXPORT));
                     if ui.add_enabled(can, all).clicked() {
                         self.save(ctx, false);
                     }
                     let some = self.selected_columns().is_some();
-                    if ui.add_enabled(can && some, egui::Button::new("Export selected columns as CSV…")).clicked() {
+                    if ui.add_enabled(can && some, egui::Button::new(t("Export selected columns as CSV…"))).clicked() {
                         self.save(ctx, true);
                     }
                     ui.separator();
-                    if ui.add(egui::Button::new("Quit").shortcut_text(ctx.format_shortcut(&QUIT))).clicked() {
+                    if ui.add(egui::Button::new(t("Quit")).shortcut_text(ctx.format_shortcut(&QUIT))).clicked() {
                         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                     }
                 });
-                ui.menu_button("View", |ui| {
-                    let toggle = egui::Button::selectable(self.details, "File details")
+                ui.menu_button(t("View"), |ui| {
+                    let toggle = egui::Button::selectable(self.details, t("File details"))
                         .shortcut_text(ctx.format_shortcut(&DETAILS));
                     if ui.add(toggle).clicked() {
                         self.details = !self.details;
@@ -184,7 +190,7 @@ impl eframe::App for App {
             let mut pick = false;
             egui::CentralPanel::default().show(ui, |ui| {
                 ui.centered_and_justified(|ui| {
-                    pick = ui.button("Open a Parquet file…").clicked();
+                    pick = ui.button(t("Open a Parquet file…")).clicked();
                 });
             });
             if pick {
@@ -196,7 +202,7 @@ impl eframe::App for App {
         let view = match &mut opened.view {
             Ok(view) => view,
             Err(error) => {
-                let message = format!("This is not a Parquet file Parkett can read: {error}");
+                let message = fill(t("This is not a Parquet file Parkett can read: {error}"), &[("error", error)]);
                 egui::CentralPanel::default().show(ui, |ui| {
                     ui.heading(name);
                     ui.label(message);
@@ -252,9 +258,9 @@ impl App {
         let ctx = ctx.clone();
         std::thread::spawn(move || {
             let mut dialog = rfd::FileDialog::new()
-                .set_title("Export as CSV")
+                .set_title(t("Export as CSV"))
                 .set_file_name(name)
-                .add_filter("CSV files", &["csv"]);
+                .add_filter(t("CSV files"), &["csv"]);
             if let Some(folder) = folder {
                 dialog = dialog.set_directory(folder);
             }
@@ -292,9 +298,9 @@ impl App {
         let folder = self.opened.as_ref().and_then(|o| o.path.parent().map(Path::to_path_buf));
         std::thread::spawn(move || {
             let mut dialog = rfd::FileDialog::new()
-                .set_title("Open a Parquet file")
-                .add_filter("Parquet files", &["parquet", "parq", "pq"])
-                .add_filter("All files", &["*"]);
+                .set_title(t("Open a Parquet file"))
+                .add_filter(t("Parquet files"), &["parquet", "parq", "pq"])
+                .add_filter(t("All files"), &["*"]);
             if let Some(folder) = folder {
                 dialog = dialog.set_directory(folder);
             }
@@ -328,25 +334,34 @@ fn export_strip(ui: &mut egui::Ui, export: &mut Option<Export>) {
                 let done = running.progress.load(Ordering::Relaxed);
                 #[allow(clippy::cast_precision_loss)]
                 let fraction = if running.rows == 0 { 1.0 } else { done as f32 / running.rows as f32 };
-                ui.label(format!("Exporting to {name}"));
+                ui.label(fill(t("Exporting to {name}"), &[("name", &name)]));
                 ui.add(egui::ProgressBar::new(fraction).desired_width(240.0));
-                ui.label(RichText::new(format!("{} of {} rows", grouped(done), grouped(running.rows))).weak());
-                if ui.button("Cancel").clicked() {
+                let template = tn("{done} of {rows} row", "{done} of {rows} rows", running.rows);
+                ui.label(RichText::new(fill(template, &[("done", &grouped(done)), ("rows", &grouped(running.rows))])).weak());
+                if ui.button(t("Cancel")).clicked() {
                     running.cancel.store(true, Ordering::Relaxed);
                 }
             }
             Some(outcome) => {
                 match outcome {
-                    Ok(Exported::Written) => ui.label(format!("Exported {} rows to {}", grouped(running.rows), running.to.display())),
-                    Ok(Exported::Cancelled) => ui.label("Export cancelled; nothing was written."),
-                    Err(error) => ui.label(RichText::new(format!("The export failed: {error}")).color(ui.visuals().warn_fg_color)),
+                    Ok(Exported::Written) => {
+                        let template = tn("Exported {rows} row to {path}", "Exported {rows} rows to {path}", running.rows);
+                        let path = running.to.display().to_string();
+                        ui.label(fill(template, &[("rows", &grouped(running.rows)), ("path", &path)]))
+                    }
+                    Ok(Exported::Cancelled) => ui.label(t("Export cancelled; nothing was written.")),
+                    Err(error) => {
+                        let message = fill(t("The export failed: {error}"), &[("error", error)]);
+                        ui.label(RichText::new(message).color(ui.visuals().warn_fg_color))
+                    }
                 };
-                if matches!(outcome, Ok(Exported::Written)) && ui.button("Open").clicked() {
+                if matches!(outcome, Ok(Exported::Written)) && ui.button(t("Open")).clicked() {
                     running.unopened = opener::open(&running.to).err().map(|e| e.to_string());
                 }
-                dismiss = ui.button("Dismiss").clicked();
+                dismiss = ui.button(t("Dismiss")).clicked();
                 if let Some(error) = &running.unopened {
-                    ui.label(RichText::new(format!("It could not be opened: {error}")).color(ui.visuals().warn_fg_color));
+                    let message = fill(t("It could not be opened: {error}"), &[("error", error)]);
+                    ui.label(RichText::new(message).color(ui.visuals().warn_fg_color));
                 }
             }
         });
@@ -367,17 +382,18 @@ fn selected_pane(ui: &mut egui::Ui, view: &mut View) {
     let notice = view.grid.notice.clone();
     egui::Panel::bottom("selected").resizable(true).default_size(90.0).show(ui, |ui| {
         ui.horizontal(|ui| {
-            ui.label(RichText::new(format!("Row {}", grouped(row + 1))).strong());
+            ui.label(RichText::new(fill(t("Row {row}"), &[("row", &grouped(row + 1))])).strong());
             ui.label(RichText::new(format!("{name} · {kind}")).weak());
             if !selection.is_cell() {
                 let (rows, columns) = (selection.rows(), selection.columns());
                 let height = rows.end() - rows.start() + 1;
                 let width = (columns.end() - columns.start() + 1) as u64;
-                ui.label(RichText::new(format!(
-                    "· {} rows × {} columns selected",
-                    grouped(height),
-                    grouped(width)
-                )).weak());
+                let rows = tn("{rows} row", "{rows} rows", height);
+                let columns = tn("{columns} column", "{columns} columns", width);
+                let rows = fill(rows, &[("rows", &grouped(height))]);
+                let columns = fill(columns, &[("columns", &grouped(width))]);
+                let selected = fill(t("· {rows} × {columns} selected"), &[("rows", &rows), ("columns", &columns)]);
+                ui.label(RichText::new(selected).weak());
             }
         });
         if let Some(notice) = notice {
@@ -385,7 +401,7 @@ fn selected_pane(ui: &mut egui::Ui, view: &mut View) {
         }
         egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| match value {
             None => {
-                ui.label(RichText::new("Reading…").weak());
+                ui.label(RichText::new(t("Reading…")).weak());
             }
             Some(Ok(None)) => {
                 ui.label(RichText::new("null").weak().italics());
@@ -394,7 +410,7 @@ fn selected_pane(ui: &mut egui::Ui, view: &mut View) {
                 ui.add(egui::Label::new(RichText::new(text).monospace()).selectable(true).wrap());
             }
             Some(Err(error)) => {
-                ui.label(format!("This block could not be read: {error}"));
+                ui.label(fill(t("This block could not be read: {error}"), &[("error", &error)]));
             }
         });
     });
@@ -402,36 +418,37 @@ fn selected_pane(ui: &mut egui::Ui, view: &mut View) {
 
 /// The file panel. DESIGN.md §6.
 fn details(ui: &mut egui::Ui, footer: &Footer) {
-    egui::CollapsingHeader::new(RichText::new("File").strong()).default_open(true).show(ui, |ui| {
+    egui::CollapsingHeader::new(RichText::new(t("File")).strong()).default_open(true).show(ui, |ui| {
         egui::Grid::new("file").num_columns(2).striped(true).show(ui, |ui| {
-            ui.label("Rows");
+            ui.label(t("Rows"));
             ui.label(grouped(footer.rows.cast_unsigned()));
             ui.end_row();
-            ui.label("Row groups");
+            ui.label(t("Row groups"));
             ui.label(grouped(footer.row_groups.len() as u64));
             ui.end_row();
             let compressed: i64 = footer.row_groups.iter().map(|g| g.compressed).sum();
             let uncompressed: i64 = footer.row_groups.iter().map(|g| g.uncompressed).sum();
-            ui.label("Data");
-            ui.label(format!("{} compressed, {} uncompressed", size(compressed), size(uncompressed)));
+            ui.label(t("Data"));
+            let data = fill(t("{compressed} compressed, {uncompressed} uncompressed"), &[("compressed", &size(compressed)), ("uncompressed", &size(uncompressed))]);
+            ui.add(egui::Label::new(data).wrap());
             ui.end_row();
             if let Some(writer) = &footer.writer {
-                ui.label("Written by");
+                ui.label(t("Written by"));
                 ui.add(egui::Label::new(writer).wrap());
                 ui.end_row();
             }
         });
     });
 
-    egui::CollapsingHeader::new(RichText::new("Schema").strong()).default_open(true).show(ui, |ui| {
+    egui::CollapsingHeader::new(RichText::new(t("Schema")).strong()).default_open(true).show(ui, |ui| {
         for field in &footer.schema {
             schema_field(ui, field);
         }
     });
 
-    egui::CollapsingHeader::new(RichText::new("Columns").strong()).show(ui, |ui| {
+    egui::CollapsingHeader::new(RichText::new(t("Columns")).strong()).show(ui, |ui| {
         egui::Grid::new("columns").num_columns(6).striped(true).show(ui, |ui| {
-            for heading in ["Column", "Codec", "Encodings", "Compressed", "Uncompressed", "Nulls"] {
+            for heading in [t("Column"), t("Codec"), t("Encodings"), t("Compressed"), t("Uncompressed"), t("Nulls")] {
                 ui.label(RichText::new(heading).weak());
             }
             ui.end_row();
@@ -447,12 +464,15 @@ fn details(ui: &mut egui::Ui, footer: &Footer) {
         });
     });
 
-    egui::CollapsingHeader::new(RichText::new("Row groups").strong()).show(ui, |ui| {
+    egui::CollapsingHeader::new(RichText::new(t("Row groups")).strong()).show(ui, |ui| {
         for (index, group) in footer.row_groups.iter().enumerate() {
-            let title = format!("{}: {} rows, {}", index + 1, grouped(group.rows.cast_unsigned()), size(group.compressed));
+            let rows = group.rows.cast_unsigned();
+            let template = tn("{index}: {rows} row, {size}", "{index}: {rows} rows, {size}", rows);
+            let number = (index + 1).to_string();
+            let title = fill(template, &[("index", &number), ("rows", &grouped(rows)), ("size", &size(group.compressed))]);
             egui::CollapsingHeader::new(title).id_salt(("row group", index)).show(ui, |ui| {
                 egui::Grid::new(("chunks", index)).num_columns(4).striped(true).show(ui, |ui| {
-                    for heading in ["Column", "Minimum", "Maximum", "Nulls"] {
+                    for heading in [t("Column"), t("Minimum"), t("Maximum"), t("Nulls")] {
                         ui.label(RichText::new(heading).weak());
                     }
                     ui.end_row();
@@ -469,7 +489,7 @@ fn details(ui: &mut egui::Ui, footer: &Footer) {
     });
 
     if !footer.metadata.is_empty() {
-        egui::CollapsingHeader::new(RichText::new("Metadata").strong()).show(ui, |ui| {
+        egui::CollapsingHeader::new(RichText::new(t("Metadata")).strong()).show(ui, |ui| {
             egui::Grid::new("metadata").num_columns(2).striped(true).show(ui, |ui| {
                 for (key, value) in &footer.metadata {
                     ui.label(key);
@@ -483,9 +503,9 @@ fn details(ui: &mut egui::Ui, footer: &Footer) {
 
 fn schema_field(ui: &mut egui::Ui, field: &Field) {
     let repetition = match field.repetition {
-        Repetition::REQUIRED => "",
-        Repetition::OPTIONAL => " · nullable",
-        Repetition::REPEATED => " · repeated",
+        Repetition::REQUIRED => String::new(),
+        Repetition::OPTIONAL => format!(" · {}", t("nullable")),
+        Repetition::REPEATED => format!(" · {}", t("repeated")),
     };
     let physical = match &field.physical {
         Some(physical) if *physical != field.kind => format!(" ({physical})"),
@@ -503,12 +523,15 @@ fn schema_field(ui: &mut egui::Ui, field: &Field) {
     }
 }
 
+/// A count with its thousands set apart, as the language in force writes them.
 fn grouped(number: u64) -> String {
     let digits = number.to_string();
+    // Translators: what sets thousands apart in a count, as in 5,000,000.
+    let separator = tc("digit grouping", ",");
     let mut out = String::new();
     for (index, digit) in digits.chars().enumerate() {
         if index > 0 && (digits.len() - index).is_multiple_of(3) {
-            out.push(',');
+            out.push_str(separator);
         }
         out.push(digit);
     }
@@ -518,10 +541,13 @@ fn grouped(number: u64) -> String {
 #[allow(clippy::cast_precision_loss)]
 fn size(bytes: i64) -> String {
     let bytes = bytes as f64;
-    match bytes {
-        b if b >= 1e9 => format!("{:.1} GB", b / 1e9),
-        b if b >= 1e6 => format!("{:.1} MB", b / 1e6),
-        b if b >= 1e3 => format!("{:.1} kB", b / 1e3),
-        b => format!("{b} B"),
-    }
+    let (amount, unit) = match bytes {
+        b if b >= 1e9 => (b / 1e9, "GB"),
+        b if b >= 1e6 => (b / 1e6, "MB"),
+        b if b >= 1e3 => (b / 1e3, "kB"),
+        b => return format!("{b} B"),
+    };
+    // Translators: the decimal point in a size, as in 1.5 MB.
+    let point = tc("decimal point", ".");
+    format!("{amount:.1} {unit}").replacen('.', point, 1)
 }
