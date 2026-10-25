@@ -1,0 +1,152 @@
+# Parkett — design
+
+The authority on how Parkett is built. `README.md` is the front door. Sections
+are numbered because the code cites them.
+
+## §1 A viewer for one format
+
+Parkett opens an Apache Parquet file and shows it: every row, in a grid, at the
+speed of the window rather than the size of the file, beside a panel that
+describes the file itself. It reads Parquet and nothing else, and it never
+writes one. A Parquet file is laid down once by whatever produced it, its
+columns compressed and encoded in row groups with an index at the end, and a
+change to one cell moves every byte after it; a tool that rewrote one would
+hand back a different file under the same name. The one thing Parkett writes is
+an export (§7), which is a new file in another format.
+
+It is one binary over egui and eframe, packaged for apt, the Microsoft Store
+and the Mac App Store the way the fleet's other egui applications are.
+`src/lib.rs` reads files and knows nothing of a window, and is
+`forbid(unsafe_code)`; `src/main.rs` is the window.
+
+## §2 What the build depends on
+
+The file is read by the `parquet` crate from `arrow-rs`, with its Arrow reader
+and its default codecs. Snappy, gzip, LZ4 and Brotli are pure Rust. Zstandard
+is the C library, compiled by `zstd-sys` and linked statically, and it is the
+one C dependency: the fleet prefers pure Rust (`~/notes/pure_rust_preference.md`)
+and this is the trade taken against that. A Rust decoder decodes the same bytes,
+and on a file of millions of rows a jump into a stretch not yet read costs
+about four times as long through it as through the C library, with the cost of
+keeping it patched in beneath `parquet`. What the C library costs here is a C
+compiler on each machine that builds, which each already has, and a rebuild
+for a Zstandard security fix.
+
+Two checks hold the build to that, because neither alone does. The artefact's
+dynamic dependencies:
+
+    objdump -p "$target/release/parkett" | grep NEEDED
+
+answer `libgcc_s`, `libm` and `libc` and nothing else, so nothing is loaded
+from the system at run time. That list cannot see a library compiled in
+statically, so the second check names the packages whose build scripts compiled
+an object file, scoped to this tree because the target directory may be shared:
+
+    find "$target/release/build" -name '*.o' \
+      | sed -E 's|.*/build/(.*)-[0-9a-f]{16}/.*|\1|' | sort -u \
+      | grep -xFf <(cargo tree -e normal,build --prefix none --target all | awk '{print $1}' | sort -u)
+
+and the answer is `zstd-sys` alone. A second name there is a second C library,
+and is decided rather than absorbed. `$target` is what `cargo metadata` reports
+as `target_directory`.
+
+A file whose codec the build lacks, which is LZO alone, opens, shows its schema
+and metadata, and says in the grid which codec it would have needed.
+
+## §3 Reading
+
+A file is opened by path and read from the disk as the grid asks for it, never
+in full. Opening reads the footer alone: the schema, the row count, and where
+each row group and column chunk lies. That is enough to draw the panel (§6), to
+size the grid, and to say how many rows there are before a single value has
+been decoded.
+
+Values are read in blocks. A block is a run of rows within one row group, in
+the columns the viewport covers, and only those columns are decoded. What a
+block costs is mostly fixed: most writers dictionary-encode a column, and the
+dictionary page of each column chunk is decompressed and decoded before any of
+its rows can be, however few are wanted. So a block is many screens tall, tens
+of thousands of rows, and the cost is paid once per stretch of the file rather
+than once per scroll. When the file carries a page index, the reader skips the
+pages outside the block; many writers do not write one, and nothing depends on
+it.
+
+Blocks are kept in a cache bounded by memory rather than by count, and a block
+falls out of it in the order it was last drawn. Reading happens off the
+interface's thread; a cell whose block has not arrived is drawn empty and the
+grid repaints when it lands. A block that fails to decode leaves the rest of the
+file readable: its cells say why, and the footer, the panel and every other
+block are unaffected.
+
+## §4 The grid
+
+The grid is the one `xods` draws, carried into this repository rather than
+depended on: `odox-ui` brings the OpenDocument model with it, and the parts that
+apply here are the painting pattern, not the code that reads a sheet. Cells are
+painted for the viewport and no others, columns are measured once into a table
+of where each begins, a pointer finds a column by searching that table, and a
+column is resized by dragging its header's edge.
+
+Rows differ from a sheet's in two ways. They are all one height, so a row's
+position is its index times that height and needs no table. And there can be
+more of them than a scroll offset can address: egui measures in `f32`, which
+stops placing rows to the pixel somewhere past a million of them. So the grid
+scrolls by row index. The scroll position is a `u64` row and a fraction of one,
+the bar beside the grid is Parkett's own and maps its length onto the row count,
+and egui is only ever asked to place the rows in view, at offsets of a screen
+or less.
+
+Column headers carry the column's name and, beneath it, its type in the words
+§5 uses. Row headers carry the row's number from 1, as a spreadsheet does.
+
+## §5 Values
+
+A value is shown in the form its logical type gives it, not its physical one,
+and Parkett formats each one itself from the Arrow array rather than through
+`arrow-cast`. A timestamp is a date and time: one adjusted to UTC is shown in
+UTC and marked as such, one in a named zone is shown in that zone from the time
+zone database `chrono-tz` carries, and one with no zone is shown as written. The
+deprecated 96-bit timestamps are read as timestamps rather than as numbers. A decimal keeps its scale. A date is a
+date. A string is text, and binary that is not marked as text is shown as
+hexadecimal up to the cell's width.
+
+Null is drawn as a faint mark rather than as empty text, so that a null and an empty
+string can be told apart at a glance.
+
+A nested value, a list, a struct or a map, is shown in the cell as compact JSON
+cut to the cell's width. Selecting the cell shows it whole and indented in a
+pane beneath the grid. Columns are not flattened into one per leaf; the grid
+has the columns the schema has at its top level.
+
+## §6 The file panel
+
+A side panel describes the file from its footer and needs no values decoded.
+It shows the schema as a tree with each field's physical type, logical type and
+whether it may be null; the row count, the number of row groups and their
+sizes; the writer the file names; the key and value metadata the producer
+stored; and, for each column, its codec, its encodings, its compressed and
+uncompressed size, and the minimum, maximum and null count its statistics
+record: the null count across the file, and the minimum and maximum per row
+group, since each row group's are compared in the column's own sort order and
+a file-wide answer would need that order applied across them. A minimum and
+maximum written by the writers that compared byte arrays as signed are not
+shown.
+
+## §7 Selection, copy and export
+
+A cell or a rectangle of cells is selected with the pointer and the keys the way
+it is in `xods`, and copy hands it over as tab separated rows. Export writes the
+file, or the columns selected, as CSV with a header row, each value in the form
+§5 shows it: a nested value as JSON and binary as hexadecimal, which is also
+what this2that's `parquet2csv` writes, so the two exports of one file agree. It is a new file chosen
+in a save dialog, it never replaces the one that was opened, and Comma is the
+application that opens it.
+
+## §8 What it does not do
+
+Parkett does not edit, write Parquet, sort, filter or run queries. Sorting and
+filtering a file that does not fit in memory needs a query engine, and the
+engines that do it in Rust are many times the size of everything else here;
+DuckDB answers those questions from the command line already. It does not open
+a directory of Parquet files as one table, read from object storage, or open
+Arrow, ORC or Avro files.

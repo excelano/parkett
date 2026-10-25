@@ -1,0 +1,9 @@
+/target
+.DS_Store
+*.swp
+dist*/
+ship.toml
+/packaging/macos/SUBMITTING.local.md
+/packaging/windows/SUBMITTING.local.md
+packaging/windows/screenshots/
+packaging/macos/screenshots/

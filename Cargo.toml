@@ -1,0 +1,40 @@
+[package]
+name = "parkett"
+description = "View Apache Parquet files"
+homepage = "https://excelano.com/parkett/"
+readme = "README.md"
+keywords = ["parquet", "viewer", "data", "gui", "egui"]
+categories = ["gui", "visualization"]
+version = "0.1.0"
+edition = "2024"
+authors = ["David M. Anderson"]
+license = "MIT"
+repository = "https://github.com/excelano/parkett"
+# eframe's floor, not this code's.
+rust-version = "1.95"
+
+[[bin]]
+name = "parkett"
+path = "src/main.rs"
+
+[dependencies]
+# Default features: the Arrow reader and every codec. Zstandard compiles C;
+# DESIGN.md §2.
+parquet = "60.0.0"
+eframe = "0.36"
+portal-theme = "0.1"
+rfd = "0.17"
+
+[dev-dependencies]
+arrow-array = "60.0.0"
+arrow-schema = "60.0.0"
+tempfile = "3.27"
+
+[profile.release]
+lto = "thin"
+
+# winit 0.30.13 references a private CoreGraphics symbol that Mac App Store
+# review refuses. This is upstream's gate (winit#4541) on that tag; delete it
+# when a winit release carries the gate.
+[patch.crates-io]
+winit = { git = "https://github.com/excelano/winit", rev = "3cfd905679da3ca241b97dea723211b580620a27" }

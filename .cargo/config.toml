@@ -1,0 +1,4 @@
+# Link the Visual C++ runtime statically: Windows does not carry it, and a
+# package that imports VCRUNTIME140.dll fails Microsoft Store certification.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
