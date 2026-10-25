@@ -33,8 +33,8 @@ The executable links the Visual C++ runtime statically and imports only DLLs tha
 """
 
 [locales."en-us"]
-website = "https://github.com/excelano/parkett"
-support = "https://github.com/excelano/parkett/issues"
+website = "https://excelano.com/parkett/"
+support = "https://excelano.com/parkett/#support"
 privacy = "https://excelano.com/legal/#parkett"
 description = """
 Parquet is how data moves between Spark, pandas, DuckDB, warehouses and pipelines: columnar, compressed, typed, and unreadable without a program. Parkett is that program, for looking. Open a file and its rows are there, millions of them, in a grid that scrolls as fast as the window can draw.
@@ -93,8 +93,8 @@ keywords = [
 ]
 
 [locales."de-de"]
-website = "https://github.com/excelano/parkett"
-support = "https://github.com/excelano/parkett/issues"
+website = "https://excelano.com/parkett/"
+support = "https://excelano.com/parkett/#support"
 privacy = "https://excelano.com/legal/#parkett"
 description = """
 Parquet ist das Format, in dem Daten zwischen Spark, pandas, DuckDB, Data Warehouses und Pipelines wandern: spaltenorientiert, komprimiert, typisiert und ohne ein Programm nicht lesbar. Parkett ist dieses Programm, zum Ansehen. Öffnen Sie eine Datei, und ihre Zeilen sind da, Millionen davon, in einem Raster, das so schnell scrollt, wie das Fenster zeichnen kann.

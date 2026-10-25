@@ -5,7 +5,7 @@ Maintainer: David M. Anderson <david.anderson@excelano.com>
 Installed-Size: @SIZE@
 Section: utils
 Priority: optional
-Homepage: https://github.com/excelano/parkett
+Homepage: https://excelano.com/parkett/
 Depends: libc6, libgcc-s1, libwayland-client0, libxkbcommon0, libxkbcommon-x11-0, libegl1, libvulkan1 | libgl1, libx11-6, libx11-xcb1, libxi6, libxcursor1, libxrandr2, desktop-file-utils, hicolor-icon-theme, shared-mime-info
 Description: View Apache Parquet files
  Parkett opens an Apache Parquet file as a grid that scrolls through
