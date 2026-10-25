@@ -459,6 +459,7 @@ $KEYS = @{
     # eframe's persistence is off across the fleet so the next launch is at 100%.
     'plus' = 0xBB; 'minus' = 0xBD
 }
+$EXTENDED = @(0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x2D, 0x2E)
 $MODIFIERS = @{ 'ctrl' = 0x11; 'control' = 0x11; 'alt' = 0x12; 'shift' = 0x10; 'win' = 0x5B }
 $KEYUP = 2
 
@@ -483,9 +484,13 @@ function Send-Key([string] $name) {
     } else {
         Refuse "key '$name': no key called '$key', and it is not a single character"
     }
+    # The navigation keys are extended keys. Without the flag Windows takes them
+    # for the numeric keypad's, and with Num Lock on it releases Shift before
+    # each, so shift+down arrives as a plain down.
+    $flag = if ($EXTENDED -contains $vk) { 1 } else { 0 }
     foreach ($m in $mods) { [Shot.Win]::keybd_event($m, 0, 0, [UIntPtr]::Zero) }
-    [Shot.Win]::keybd_event($vk, 0, 0, [UIntPtr]::Zero)
-    [Shot.Win]::keybd_event($vk, 0, $KEYUP, [UIntPtr]::Zero)
+    [Shot.Win]::keybd_event($vk, 0, $flag, [UIntPtr]::Zero)
+    [Shot.Win]::keybd_event($vk, 0, ($flag -bor $KEYUP), [UIntPtr]::Zero)
     # Released in reverse, and always: a modifier left down is read by every
     # keystroke after it, so one stuck ctrl turns the text that follows into a
     # run of shortcuts that type nothing and may do something else entirely.
