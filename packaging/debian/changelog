@@ -1,0 +1,6 @@
+parkett (0.1.0) unstable; urgency=medium
+
+  * First release: a Parquet file as a grid, its footer as a panel, copy as
+    tab-separated rows, export as CSV, in English and German
+
+ -- David M. Anderson <david.anderson@excelano.com>  Sat, 24 Oct 2026 23:59:00 -0500

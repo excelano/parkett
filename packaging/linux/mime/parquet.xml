@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The Apache Parquet media type, for shared-mime-info, which does not declare
+  it. The name is IANA's registration. A Parquet file begins and ends with the
+  four bytes PAR1, so the magic agrees with the glob.
+
+  This file is the one declaration of the type on a machine Parkett is
+  installed on. Two packages cannot ship one path, so a second Parquet product
+  would move it and the icon into a package both depend on.
+
+  Author: David M. Anderson
+  Built with AI assistance (Claude, Anthropic)
+-->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/vnd.apache.parquet">
+    <comment>Apache Parquet file</comment>
+    <comment xml:lang="de">Apache-Parquet-Datei</comment>
+    <glob pattern="*.parquet"/>
+    <magic priority="50">
+      <match type="string" offset="0" value="PAR1"/>
+    </magic>
+    <icon name="application-vnd.apache.parquet"/>
+    <!--
+    Named again as the generic icon: GTK tries every name in Adwaita before any
+    in hicolor, and Adwaita's application-x-generic would otherwise win.
+    -->
+    <generic-icon name="application-vnd.apache.parquet"/>
+  </mime-type>
+</mime-info>

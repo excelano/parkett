@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Parkett
+GenericName=Parquet Viewer
+GenericName[de]=Parquet-Betrachter
+Comment=View Apache Parquet files
+Comment[de]=Apache-Parquet-Dateien ansehen
+Exec=parkett %f
+Icon=parkett
+Terminal=false
+MimeType=application/vnd.apache.parquet;
+Categories=Office;Viewer;
+Keywords=parquet;arrow;columnar;data;table;viewer;csv;
+Keywords[de]=parquet;arrow;spaltenorientiert;Daten;Tabelle;Betrachter;csv;
+StartupNotify=true
+StartupWMClass=parkett

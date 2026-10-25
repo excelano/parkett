@@ -1,0 +1,30 @@
+Package: parkett
+Version: @VERSION@
+Architecture: @ARCH@
+Maintainer: David M. Anderson <david.anderson@excelano.com>
+Installed-Size: @SIZE@
+Section: utils
+Priority: optional
+Homepage: https://github.com/excelano/parkett
+Depends: libc6, libgcc-s1, libwayland-client0, libxkbcommon0, libxkbcommon-x11-0, libegl1, libvulkan1 | libgl1, libx11-6, libx11-xcb1, libxi6, libxcursor1, libxrandr2, desktop-file-utils, hicolor-icon-theme, shared-mime-info
+Description: View Apache Parquet files
+ Parkett opens an Apache Parquet file as a grid that scrolls through
+ millions of rows, reading only the stretch in view, and beside it, on
+ request, what the file says about itself: its schema, row groups, and each
+ column's codec, encodings, sizes and statistics. Values are shown by their
+ type, nested values as JSON. A selection copies as tab-separated rows, and
+ the file or the columns selected export as CSV. It never writes Parquet.
+ .
+ The package declares the application/vnd.apache.parquet media type, which
+ shared-mime-info does not, so a file manager knows a .parquet file and
+ offers Parkett for it.
+ .
+ The executable links libc, libgcc and libm and nothing else the linker
+ records; Zstandard is compiled in. The display stack, the graphics driver
+ loader and the keyboard map libraries are opened by name at run time, so
+ Depends is written by hand and packaging/linux/check-libraries.sh measures
+ it against a running window on both display backends.
+ .
+ The last three packages own the dpkg triggers that rebuild the desktop,
+ icon and media type caches, which is why this package carries no maintainer
+ scripts.

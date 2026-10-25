@@ -1,0 +1,41 @@
+.\" Manual page for parkett. @VERSION@ is filled in by build-deb.sh.
+.\"
+.\" Author: David M. Anderson
+.\" Built with AI assistance (Claude, Anthropic)
+.TH PARKETT 1 "2026\-10\-24" "parkett @VERSION@" "User Commands"
+.SH NAME
+parkett \- view Apache Parquet files
+.SH SYNOPSIS
+.B parkett
+.RI [ file ]
+.SH DESCRIPTION
+.B Parkett
+opens an Apache Parquet file as a grid of its rows and, on request, a panel
+describing the file itself: its schema, row groups, and each column's codec,
+encodings, sizes and statistics. It reads the stretch of the file in view and
+nothing more, so a file of millions of rows opens at once.
+.PP
+It never writes Parquet and never changes the file it opened. A selection
+copies to the clipboard as tab\-separated rows, and File, Export as CSV writes
+every row, or the columns selected, to a new file.
+.SH OPTIONS
+There are none.
+.B parkett
+is a window rather than a command\-line interface.
+.SH ARGUMENTS
+.TP
+.I file
+A Parquet file to open. Without one, the window opens empty.
+.SH ENVIRONMENT
+.TP
+.B POTEXT_LANG
+The language to show, overriding the desktop's, such as
+.BR de .
+.SH EXIT STATUS
+Returns success when the window has been closed. A non\-zero status means the
+window could not be created at all: no display, or no usable graphics driver.
+.SH SEE ALSO
+The design of this application is DESIGN.md in its repository at
+https://github.com/excelano/parkett.
+.SH AUTHOR
+David M. Anderson

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <g>
+  <!--
+    Parkett: a basketweave parquet floor, the square Windows and the Microsoft Store take and treat themselves.
+    Four tiles of three planks, each tile turned from its neighbours, edge
+    to edge, light and dark planks on the darker brown of the joints.
+
+    Author: David M. Anderson
+    Built with AI assistance (Claude, Anthropic)
+
+    This comment sits inside the element because gdk-pixbuf looks for
+    <svg in the first 256 bytes and refuses a file where it comes later.
+  -->
+    <rect width="64" height="64" fill="#8a5a2e"/>
+    <rect x="0.8" y="0.800" width="30.4" height="9.067" rx="0.8" fill="#e2b47a"/>
+    <rect x="0.8" y="11.467" width="30.4" height="9.067" rx="0.8" fill="#c48c52"/>
+    <rect x="0.8" y="22.133" width="30.4" height="9.067" rx="0.8" fill="#e2b47a"/>
+    <rect x="32.800" y="0.8" width="9.067" height="30.4" rx="0.8" fill="#e2b47a"/>
+    <rect x="43.467" y="0.8" width="9.067" height="30.4" rx="0.8" fill="#c48c52"/>
+    <rect x="54.133" y="0.8" width="9.067" height="30.4" rx="0.8" fill="#e2b47a"/>
+    <rect x="0.800" y="32.8" width="9.067" height="30.4" rx="0.8" fill="#e2b47a"/>
+    <rect x="11.467" y="32.8" width="9.067" height="30.4" rx="0.8" fill="#c48c52"/>
+    <rect x="22.133" y="32.8" width="9.067" height="30.4" rx="0.8" fill="#e2b47a"/>
+    <rect x="32.8" y="32.800" width="30.4" height="9.067" rx="0.8" fill="#e2b47a"/>
+    <rect x="32.8" y="43.467" width="30.4" height="9.067" rx="0.8" fill="#c48c52"/>
+    <rect x="32.8" y="54.133" width="30.4" height="9.067" rx="0.8" fill="#e2b47a"/>
+  </g>
+</svg>

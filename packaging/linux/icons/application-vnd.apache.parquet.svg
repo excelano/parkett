@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <g>
+  <!--
+    A Parquet file: a page with the application's basketweave on it.
+
+    Author: David M. Anderson
+    Built with AI assistance (Claude, Anthropic)
+
+    The comment sits inside the element because gdk-pixbuf looks for <svg in
+    the first 256 bytes.
+  -->
+    <path d="M13 4 H41 L53 16 V60 H13 Z" fill="#2f3337"/>
+    <path d="M15 6 H40 L51 17 V58 H15 Z" fill="#f2eee4"/>
+    <path d="M40 6 V17 H51 Z" fill="#d9d3c3"/>
+    <rect x="18.0" y="26.0" width="28.0" height="28.0" fill="#8a5a2e"/>
+    <rect x="18.5" y="26.500" width="13" height="3.667" rx="0.4" fill="#e2b47a"/>
+    <rect x="18.5" y="31.167" width="13" height="3.667" rx="0.4" fill="#c48c52"/>
+    <rect x="18.5" y="35.833" width="13" height="3.667" rx="0.4" fill="#e2b47a"/>
+    <rect x="32.500" y="26.5" width="3.667" height="13" rx="0.4" fill="#e2b47a"/>
+    <rect x="37.167" y="26.5" width="3.667" height="13" rx="0.4" fill="#c48c52"/>
+    <rect x="41.833" y="26.5" width="3.667" height="13" rx="0.4" fill="#e2b47a"/>
+    <rect x="18.500" y="40.5" width="3.667" height="13" rx="0.4" fill="#e2b47a"/>
+    <rect x="23.167" y="40.5" width="3.667" height="13" rx="0.4" fill="#c48c52"/>
+    <rect x="27.833" y="40.5" width="3.667" height="13" rx="0.4" fill="#e2b47a"/>
+    <rect x="32.5" y="40.500" width="13" height="3.667" rx="0.4" fill="#e2b47a"/>
+    <rect x="32.5" y="45.167" width="13" height="3.667" rx="0.4" fill="#c48c52"/>
+    <rect x="32.5" y="49.833" width="13" height="3.667" rx="0.4" fill="#e2b47a"/>
+  </g>
+</svg>
