@@ -14,6 +14,22 @@ opens a file without reading all of it, and it asks for nothing but the file.
 For questions a viewer cannot answer, sorting a file larger than memory or
 joining it to another, DuckDB's command line reads Parquet directly.
 
+## Install
+
+On Debian and Ubuntu, from the Excelano apt repository:
+
+```
+curl -fsSL https://excelano.com/apt/setup.sh | sudo sh && sudo apt install parkett
+```
+
+With cargo, which builds it and needs a C compiler for Zstandard:
+
+```
+cargo install parkett
+```
+
+https://excelano.com/parkett/ is the product page for every platform.
+
 ## Build
 
 ```
