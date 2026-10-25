@@ -11,7 +11,7 @@ use std::ops::RangeInclusive;
 
 use eframe::egui::text::{LayoutJob, TextWrapping};
 use eframe::egui::{
-    self, Align2, Color32, CursorIcon, Event, FontId, Key, Painter, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, Visuals,
+    self, Align2, Color32, CursorIcon, Event, FontId, Key, Modifiers, Painter, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, Visuals,
     pos2, vec2,
 };
 use parkett::{BlockId, Blocks, Table, copy, values};
@@ -405,39 +405,44 @@ impl Grid {
             return;
         }
         let page = (layout.visible_rows().floor() as u64).saturating_sub(1).max(1);
-        let (row, column) = self.selection.map_or((self.top.floor() as u64, 0), |s| s.cursor);
-        let (moved, shift, all, collapse) = ui.input(|i| {
-            let command = i.modifiers.command;
-            let moved = if i.key_pressed(Key::ArrowDown) {
-                Some((if command { rows - 1 } else { (row + 1).min(rows - 1) }, column))
-            } else if i.key_pressed(Key::ArrowUp) {
-                Some((if command { 0 } else { row.saturating_sub(1) }, column))
-            } else if i.key_pressed(Key::ArrowRight) {
-                Some((row, if command { columns - 1 } else { (column + 1).min(columns - 1) }))
-            } else if i.key_pressed(Key::ArrowLeft) {
-                Some((row, if command { 0 } else { column.saturating_sub(1) }))
-            } else if i.key_pressed(Key::PageDown) {
-                Some(((row + page).min(rows - 1), column))
-            } else if i.key_pressed(Key::PageUp) {
-                Some((row.saturating_sub(page), column))
-            } else if i.key_pressed(Key::Home) {
-                Some((if command { 0 } else { row }, 0))
-            } else if i.key_pressed(Key::End) {
-                Some((if command { rows - 1 } else { row }, columns - 1))
-            } else {
-                None
-            };
-            (moved, i.modifiers.shift, command && i.key_pressed(Key::A), i.key_pressed(Key::Escape))
+        // Each press with the modifiers it was pressed with, in order: a frame
+        // can hold several, and a modifier released within the frame still
+        // applied to the key it was held for.
+        let presses: Vec<(Key, Modifiers)> = ui.input(|i| {
+            i.events
+                .iter()
+                .filter_map(|event| match event {
+                    Event::Key { key, pressed: true, modifiers, .. } => Some((*key, *modifiers)),
+                    _ => None,
+                })
+                .collect()
         });
-        if all {
-            self.selection = Some(Selection { anchor: (0, 0), cursor: (rows - 1, columns - 1) });
-        }
-        if collapse {
-            self.selection = self.selection.filter(|s| !s.is_cell()).map(|s| Selection::cell(s.cursor));
-        }
-        if let Some(cell) = moved {
-            self.select(cell, shift);
-            self.reveal(layout, cell);
+        for (key, modifiers) in presses {
+            let (row, column) = self.selection.map_or((self.top.floor() as u64, 0), |s| s.cursor);
+            let command = modifiers.command;
+            let moved = match key {
+                Key::ArrowDown => Some((if command { rows - 1 } else { (row + 1).min(rows - 1) }, column)),
+                Key::ArrowUp => Some((if command { 0 } else { row.saturating_sub(1) }, column)),
+                Key::ArrowRight => Some((row, if command { columns - 1 } else { (column + 1).min(columns - 1) })),
+                Key::ArrowLeft => Some((row, if command { 0 } else { column.saturating_sub(1) })),
+                Key::PageDown => Some(((row + page).min(rows - 1), column)),
+                Key::PageUp => Some((row.saturating_sub(page), column)),
+                Key::Home => Some((if command { 0 } else { row }, 0)),
+                Key::End => Some((if command { rows - 1 } else { row }, columns - 1)),
+                Key::A if command => {
+                    self.selection = Some(Selection { anchor: (0, 0), cursor: (rows - 1, columns - 1) });
+                    None
+                }
+                Key::Escape => {
+                    self.selection = self.selection.filter(|s| !s.is_cell()).map(|s| Selection::cell(s.cursor));
+                    None
+                }
+                _ => None,
+            };
+            if let Some(cell) = moved {
+                self.select(cell, modifiers.shift);
+                self.reveal(layout, cell);
+            }
         }
     }
 
