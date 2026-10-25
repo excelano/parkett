@@ -233,6 +233,11 @@ impl Grid {
 
     fn pointer(&mut self, ui: &Ui, response: &egui::Response, layout: &Layout, table: &Table, blocks: &mut Blocks, font: &FontId) {
         let rows = table.rows();
+        // Ended however the button came up, including over another panel or
+        // outside the window, where the grid sees no pointer at all.
+        if !ui.input(|i| i.pointer.primary_down()) {
+            self.drag = None;
+        }
         let Some(at) = response.interact_pointer_pos().or_else(|| response.hover_pos()) else {
             return;
         };
@@ -272,9 +277,6 @@ impl Grid {
             } else {
                 None
             };
-        }
-        if response.drag_stopped() {
-            self.drag = None;
         }
         match self.drag {
             Some(Drag::Resize { column, from, width }) => {
@@ -430,8 +432,8 @@ impl Grid {
         if all {
             self.selection = Some(Selection { anchor: (0, 0), cursor: (rows - 1, columns - 1) });
         }
-        if collapse && let Some(selection) = &mut self.selection {
-            selection.anchor = selection.cursor;
+        if collapse {
+            self.selection = self.selection.filter(|s| !s.is_cell()).map(|s| Selection::cell(s.cursor));
         }
         if let Some(cell) = moved {
             self.select(cell, shift);

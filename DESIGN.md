@@ -109,7 +109,8 @@ Up and Down, Home and End, with Ctrl reaching the edges of the file; a range by
 Shift with any of those or by a drag, which scrolls the grid when it passes the
 edge; a column by its header, a row by its number and the file by the corner
 between them, or Ctrl+A. Escape shrinks a range back to its cursor cell, the
-one the keys move and the pane beneath the grid shows.
+one the keys move and the pane beneath the grid shows, and on one cell clears
+the selection.
 
 ## §5 Values
 
