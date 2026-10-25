@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The bundle's property list. build-app.sh fills @VERSION@ and @BUILD@ from
+  version.sh: the version a person sees, and the build number App Store
+  Connect requires to rise on every upload, which is the commit count.
+
+  Parquet is Apache's format, so its type is imported, not exported: macOS
+  declares none, and the declaration says what a .parquet is until something
+  that owns it says so. Parkett handles it as a Viewer ranked Alternate, since
+  it opens the format and never writes it.
+
+  LSApplicationCategoryType is required at upload. ITSAppUsesNonExemptEncryption
+  is false: Parkett implements no cryptography and makes no network call.
+  CFBundleLocalizations names the catalogues src/main.rs carries, so App Store
+  Connect and the per-app language setting list German.
+
+  Author: David M. Anderson
+  Built with AI assistance (Claude, Anthropic)
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>de</string>
+	</array>
+	<key>CFBundleExecutable</key>
+	<string>parkett</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.excelano.Parkett</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleName</key>
+	<string>Parkett</string>
+	<key>CFBundleDisplayName</key>
+	<string>Parkett</string>
+	<key>CFBundleShortVersionString</key>
+	<string>@VERSION@</string>
+	<key>CFBundleVersion</key>
+	<string>@BUILD@</string>
+	<key>CFBundleIconFile</key>
+	<string>parkett</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.developer-tools</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>11.0</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Apache Parquet file</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>org.apache.parquet</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>parquet</string>
+		</dict>
+	</array>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>org.apache.parquet</string>
+			<key>UTTypeDescription</key>
+			<string>Apache Parquet file</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeIconFile</key>
+			<string>parquet</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>parquet</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/vnd.apache.parquet</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+</dict>
+</plist>

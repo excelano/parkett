@@ -3,11 +3,17 @@
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
 
-#![forbid(unsafe_code)]
+// deny rather than forbid, for the one module below: macOS delivers a
+// double-clicked file as an Apple Event, and receiving it needs an
+// Objective-C method that cannot be written without unsafe.
+#![deny(unsafe_code)]
 #![warn(clippy::pedantic)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod grid;
+#[cfg(target_os = "macos")]
+#[allow(unsafe_code)]
+mod opened_document;
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -65,10 +71,17 @@ fn main() -> eframe::Result {
     let viewport = viewport.with_icon(egui::IconData::default());
     let options = eframe::NativeOptions { viewport, ..Default::default() };
 
+    // Before eframe: macOS sends the document that launched the application
+    // before eframe's creation closure runs.
+    #[cfg(target_os = "macos")]
+    opened_document::watch();
+
     eframe::run_native(
         PRODUCT,
         options,
         Box::new(move |cc| {
+            #[cfg(target_os = "macos")]
+            opened_document::wake_with(&cc.egui_ctx);
             portal_theme::follow(&cc.egui_ctx);
             let opened = path.map(|path| Opened::open(path, &cc.egui_ctx));
             Ok(Box::new(App { opened, picking: None, titled: None, details: false, saving: None, export: None }))
@@ -154,6 +167,10 @@ impl Drop for Export {
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = &ui.ctx().clone();
+        #[cfg(target_os = "macos")]
+        if let Some(path) = opened_document::taken() {
+            self.opened = Some(Opened::open(path, ctx));
+        }
         if let Some(answer) = self.picking.as_ref().and_then(|r| r.try_recv().ok()) {
             self.picking = None;
             if let Some(path) = answer {

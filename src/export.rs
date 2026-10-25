@@ -5,10 +5,11 @@
 
 use std::fs::{self, File};
 use std::io::{BufWriter, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use crate::i18n::t;
+use crate::staging::Staging;
 use crate::{Table, values};
 
 const BATCH_ROWS: usize = 8192;
@@ -22,9 +23,8 @@ pub enum Exported {
 /// Write `columns` of every row to `to` as CSV with a header row, counting
 /// rows into `progress` and stopping when `cancel` is set.
 ///
-/// The CSV is written beside `to` under another name and put in its place only
-/// once it is whole, so a cancelled or failed export leaves whatever was at
-/// `to` as it was.
+/// The CSV is written whole before it takes `to`'s place, so a cancelled or
+/// failed export leaves whatever was at `to` as it was.
 ///
 /// # Errors
 ///
@@ -34,17 +34,10 @@ pub fn csv(table: &Table, columns: &[usize], to: &Path, progress: &AtomicU64, ca
     if same_file(table.path(), to) {
         return Err(t("An export cannot replace the file it is read from.").to_owned());
     }
-    let partial = partial_path(to);
-    let result = write(table, columns, &partial, progress, cancel);
-    match result {
-        Ok(Exported::Written) => fs::rename(&partial, to).map(|()| Exported::Written).map_err(|e| {
-            let _ = fs::remove_file(&partial);
-            e.to_string()
-        }),
-        other => {
-            let _ = fs::remove_file(&partial);
-            other
-        }
+    let staging = Staging::for_destination(to).map_err(|e| e.to_string())?;
+    match write(table, columns, staging.path(), progress, cancel)? {
+        Exported::Written => staging.finish().map(|()| Exported::Written).map_err(|e| e.to_string()),
+        Exported::Cancelled => Ok(Exported::Cancelled),
     }
 }
 
@@ -99,9 +92,4 @@ fn same_file(a: &Path, b: &Path) -> bool {
         (Ok(a), Ok(b)) => a == b,
         _ => a == b,
     }
-}
-
-fn partial_path(to: &Path) -> PathBuf {
-    let name = to.file_name().map_or_else(|| "export".into(), |n| n.to_string_lossy().into_owned());
-    to.with_file_name(format!(".{name}.part"))
 }

@@ -17,6 +17,7 @@ pub mod i18n {
 pub mod copy;
 pub mod export;
 mod footer;
+mod staging;
 mod table;
 pub mod values;
 
