@@ -24,7 +24,7 @@
 import CoreGraphics
 import Foundation
 
-let wanted = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "Duckling"
+let wanted = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "Parkett"
 
 guard
     let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID)
