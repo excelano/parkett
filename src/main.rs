@@ -26,6 +26,17 @@ use crate::grid::Grid;
 const APP_ID: &str = "parkett";
 const PRODUCT: &str = "Parkett";
 
+#[cfg(target_os = "windows")]
+const WINDOW_ICON: &[u8] = include_bytes!("../packaging/windows/parkett.ico");
+
+/// The 64-pixel entry, the largest no display scaling has to enlarge.
+#[cfg(target_os = "windows")]
+fn window_icon() -> Option<egui::IconData> {
+    let directory = ico::IconDir::read(std::io::Cursor::new(WINDOW_ICON)).ok()?;
+    let image = directory.entries().iter().find(|e| e.width() == 64)?.decode().ok()?;
+    Some(egui::IconData { rgba: image.rgba_data().to_vec(), width: image.width(), height: image.height() })
+}
+
 const OPEN: KeyboardShortcut = KeyboardShortcut::new(Modifiers::COMMAND, Key::O);
 const EXPORT: KeyboardShortcut = KeyboardShortcut::new(Modifiers::COMMAND, Key::E);
 const DETAILS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::COMMAND, Key::I);
@@ -43,6 +54,15 @@ fn main() -> eframe::Result {
         .with_app_id(APP_ID)
         .with_title(PRODUCT)
         .with_inner_size([1100.0, 720.0]);
+    #[cfg(target_os = "windows")]
+    let viewport = match window_icon() {
+        Some(icon) => viewport.with_icon(icon),
+        None => viewport,
+    };
+    // eframe gives a viewport that names no icon its own logo, which outranks
+    // the bundle's on macOS; an empty one declines it.
+    #[cfg(target_os = "macos")]
+    let viewport = viewport.with_icon(egui::IconData::default());
     let options = eframe::NativeOptions { viewport, ..Default::default() };
 
     eframe::run_native(
