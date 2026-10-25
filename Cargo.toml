@@ -1,7 +1,6 @@
 [package]
 name = "parkett"
 description = "View Apache Parquet files"
-homepage = "https://excelano.com/parkett/"
 readme = "README.md"
 keywords = ["parquet", "viewer", "data", "gui", "egui"]
 categories = ["gui", "visualization"]
