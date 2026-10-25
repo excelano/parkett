@@ -1,0 +1,18 @@
+# What this release tells the stores it changed, in every language the
+# listing is in. build-release refuses a release whose version this does not
+# name, and the store apps refuse a listed language it lacks.
+#
+# Author: David M. Anderson
+# Built with AI assistance (Claude, Anthropic)
+
+version = "0.1.0"
+
+[locales."en-us"]
+whats-new = """
+The first release. Parkett opens an Apache Parquet file as a grid that scrolls through millions of rows, shows the file's schema, row groups and statistics beside it, copies a selection as tab-separated rows and exports CSV.
+"""
+
+[locales."de-de"]
+whats-new = """
+Die erste Version. Parkett öffnet eine Apache-Parquet-Datei als Raster, das durch Millionen Zeilen scrollt, zeigt Schema, Zeilengruppen und Statistiken der Datei daneben, kopiert eine Auswahl als tabulatorgetrennte Zeilen und exportiert CSV.
+"""

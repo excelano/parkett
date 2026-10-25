@@ -1,0 +1,153 @@
+# The copy both store listings are filled in from. Every line is a claim about
+# the code, so it is reviewed and committed here and the release apps push it;
+# a listing is not edited in a browser. What changed in a release is
+# release-notes.toml.
+#
+# Limits, counted in characters: apple.name and apple.subtitle 30,
+# apple.promotional-text 170, apple.keywords 100 with the commas, description
+# 4,000, microsoft.short-description 500, microsoft.features 20 of 200,
+# microsoft.keywords 7 of 30, the review notes 4,000 each. The German uses the
+# window's own terms, from po/de.po.
+#
+# Author: David M. Anderson
+# Built with AI assistance (Claude, Anthropic)
+
+apple-review-notes = """
+Parkett is a viewer for Apache Parquet files, the columnar data format of Spark, pandas, DuckDB and most data pipelines. It opens a file as a grid of its rows and, under View, File details, a panel describing the file itself.
+
+To review it, open any .parquet file with File, Open, or double-click one in Finder: the bundle imports the type org.apache.parquet and claims it as a viewer. A sample file is in the repository at packaging/demo/observations.parquet: https://github.com/excelano/parkett/raw/main/packaging/demo/observations.parquet
+
+Things to try: scroll, select cells with the arrow keys or the pointer, Shift to extend a selection, Cmd+C to copy it, Cmd+I for the file details, and File, Export as CSV, whose Open button hands the finished file to the application registered for CSV.
+
+The App Sandbox is on with two entitlements: the sandbox itself and read-write access to user-selected files. Parkett never writes to the Parquet file it opened. An export is written to the location chosen in the save panel; replacing an existing file goes through NSFileManager's replaceItemAtURL from the item replacement directory, so nothing is created beside it.
+
+Parkett makes no network connection, keeps no settings or history, and collects nothing.
+"""
+
+microsoft-review-notes = """
+Parkett is a viewer for Apache Parquet files. Open any .parquet file with File, Open; the package associates the extension and adds Parkett under Open With. A sample file is at https://github.com/excelano/parkett/raw/main/packaging/demo/observations.parquet
+
+The optional "Blocked executables" test fails and the kit's overall result is PASS. kernel32.dll!CreateProcessW and the "cmd.exe" strings are the Rust standard library's process module, linked in because the GUI framework uses the webbrowser crate to open hyperlinks. shell32.dll!ShellExecuteW is the opener crate, which the export's Open button uses to hand a finished CSV to the application Windows has registered for CSV. Parkett starts no other process.
+
+The executable links the Visual C++ runtime statically and imports only DLLs that ship with Windows. It makes no network connection and keeps no settings or history.
+"""
+
+[locales."en-us"]
+website = "https://github.com/excelano/parkett"
+support = "https://github.com/excelano/parkett/issues"
+privacy = "https://excelano.com/legal/#parkett"
+description = """
+Parquet is how data moves between Spark, pandas, DuckDB, warehouses and pipelines: columnar, compressed, typed, and unreadable without a program. Parkett is that program, for looking. Open a file and its rows are there, millions of them, in a grid that scrolls as fast as the window can draw.
+
+WHAT IT SHOWS
+Every row, in a grid with each column's name and type above it. Values in the form their type gives them: timestamps in their time zone to their unit's precision, decimals with their scale, dates as dates, binary as hexadecimal, lists, structs and maps as JSON. Null is a faint mark, so it is never mistaken for an empty string. Select a cell and its whole value appears beneath the grid, a nested one laid out.
+
+WHAT THE FILE SAYS ABOUT ITSELF
+Beside the grid, on request, the footer: the schema as a tree with each field's type and nullability, the row count, the row groups and their sizes, the writer, the metadata the producer stored, and for every column its codec, encodings, compressed and uncompressed size, and the minimum, maximum and null count its statistics record.
+
+HOW IT READS
+Only the stretch of the file in view, decoded in blocks on other threads, so a file of millions of rows opens at once and a jump to its last row takes a moment rather than a minute. Snappy, gzip, Brotli, LZ4 and Zstandard are all read.
+
+COPY AND EXPORT
+Select a cell, a range, a column or the whole file. Copy hands a range over as tab-separated rows that paste into a spreadsheet as cells. Export writes every row, or the columns selected, as CSV, with timestamps in ISO 8601 so a spreadsheet takes them as dates, and Open hands the finished file to whatever opens CSV on your machine.
+
+WHAT IT DOES NOT DO
+It never writes Parquet and never changes the file it opened. No network connection of any kind, no account, no telemetry, no settings file or history. It does not sort, filter or run queries; it shows the file as it is.
+
+In English and German.
+
+OPEN SOURCE
+Parkett is open source under the MIT licence: github.com/excelano/parkett.
+"""
+
+[locales."en-us".apple]
+name = "Parkett"
+subtitle = "A viewer for Parquet files"
+promotional-text = "Open a Parquet file of millions of rows and scroll it at once. See its schema, row groups and statistics, copy cells, export CSV. Nothing leaves your Mac."
+keywords = "parquet,arrow,columnar,data,viewer,csv,schema,table,spark,pandas,duckdb,analytics"
+
+[locales."en-us".microsoft]
+name = "Parkett"
+short-description = """
+Parkett opens an Apache Parquet file as a grid that scrolls through millions of rows, reading only the stretch in view, and shows what the file says about itself: its schema, row groups, and each column's codec, sizes and statistics. Copy cells as tab-separated rows, or export CSV. It never changes the file and makes no network connection.
+"""
+features = [
+  "Opens a Parquet file of millions of rows at once, reading only the stretch in view.",
+  "Shows each value by its type: timestamps in their zone, decimals with their scale, nested values as JSON, null as its own mark.",
+  "The file's footer beside the grid: schema, row groups, writer, metadata, and each column's codec, encodings, sizes and statistics.",
+  "Select a cell, a range, a column or the whole file with the pointer or the keyboard.",
+  "Copy a range as tab-separated rows that paste into a spreadsheet as cells.",
+  "Export every row, or the columns selected, as CSV, then open it in one click.",
+  "Reads Snappy, gzip, Brotli, LZ4 and Zstandard.",
+  "Never writes Parquet. No network connection, no account, no telemetry.",
+  "In English and German. Open source under the MIT licence.",
+]
+keywords = [
+  "parquet",
+  "arrow",
+  "columnar",
+  "data",
+  "viewer",
+  "csv",
+  "schema",
+]
+
+[locales."de-de"]
+website = "https://github.com/excelano/parkett"
+support = "https://github.com/excelano/parkett/issues"
+privacy = "https://excelano.com/legal/#parkett"
+description = """
+Parquet ist das Format, in dem Daten zwischen Spark, pandas, DuckDB, Data Warehouses und Pipelines wandern: spaltenorientiert, komprimiert, typisiert und ohne ein Programm nicht lesbar. Parkett ist dieses Programm, zum Ansehen. Öffnen Sie eine Datei, und ihre Zeilen sind da, Millionen davon, in einem Raster, das so schnell scrollt, wie das Fenster zeichnen kann.
+
+WAS ES ZEIGT
+Jede Zeile, in einem Raster mit Name und Typ jeder Spalte darüber. Werte in der Form, die ihr Typ ihnen gibt: Zeitstempel in ihrer Zeitzone und in der Genauigkeit ihrer Einheit, Dezimalzahlen mit ihren Nachkommastellen, Datumsangaben als Datum, Binärdaten hexadezimal, Listen, Strukturen und Maps als JSON. Null ist eine blasse Markierung und wird nie mit einer leeren Zeichenkette verwechselt. Wählen Sie eine Zelle aus, und ihr ganzer Wert erscheint unter dem Raster, ein verschachtelter eingerückt.
+
+WAS DIE DATEI ÜBER SICH SAGT
+Neben dem Raster, auf Wunsch, der Dateifuß: das Schema als Baum mit Typ und Nullbarkeit jedes Felds, die Zeilenzahl, die Zeilengruppen und ihre Größen, das schreibende Programm, die Metadaten des Erzeugers und für jede Spalte ihr Codec, ihre Kodierungen, ihre komprimierte und unkomprimierte Größe sowie Minimum, Maximum und Anzahl der Nullwerte aus ihren Statistiken.
+
+WIE ES LIEST
+Nur den Teil der Datei, der zu sehen ist, in Blöcken auf anderen Threads entschlüsselt. Eine Datei mit Millionen Zeilen öffnet sofort, und der Sprung zur letzten Zeile dauert einen Moment statt einer Minute. Snappy, gzip, Brotli, LZ4 und Zstandard werden gelesen.
+
+KOPIEREN UND EXPORTIEREN
+Wählen Sie eine Zelle, einen Bereich, eine Spalte oder die ganze Datei aus. Kopieren übergibt einen Bereich als tabulatorgetrennte Zeilen, die sich in einer Tabellenkalkulation als Zellen einfügen. Der Export schreibt jede Zeile oder die ausgewählten Spalten als CSV, mit Zeitstempeln in ISO 8601, damit eine Tabellenkalkulation sie als Datum erkennt, und Öffnen übergibt die fertige Datei dem Programm, das auf Ihrem Rechner CSV öffnet.
+
+WAS ES NICHT TUT
+Es schreibt nie Parquet und verändert nie die geöffnete Datei. Keinerlei Netzwerkverbindung, kein Konto, keine Telemetrie, keine Einstellungsdatei und kein Verlauf. Es sortiert, filtert und fragt nicht ab; es zeigt die Datei, wie sie ist.
+
+Auf Deutsch und Englisch.
+
+OPEN SOURCE
+Parkett ist Open Source unter der MIT-Lizenz: github.com/excelano/parkett.
+"""
+
+[locales."de-de".apple]
+name = "Parkett"
+subtitle = "Parquet-Dateien ansehen"
+promotional-text = "Öffnen Sie eine Parquet-Datei mit Millionen Zeilen und scrollen Sie sofort. Schema, Zeilengruppen, Statistiken, Zellen kopieren, CSV exportieren. Alles bleibt lokal."
+keywords = "parquet,arrow,spaltenorientiert,Daten,Betrachter,csv,Schema,Tabelle,spark,pandas,duckdb"
+
+[locales."de-de".microsoft]
+name = "Parkett"
+short-description = """
+Parkett öffnet eine Apache-Parquet-Datei als Raster, das durch Millionen Zeilen scrollt und nur den sichtbaren Teil liest, und zeigt, was die Datei über sich sagt: Schema, Zeilengruppen sowie Codec, Größen und Statistiken jeder Spalte. Zellen als tabulatorgetrennte Zeilen kopieren oder als CSV exportieren. Die Datei bleibt unverändert, und es gibt keine Netzwerkverbindung.
+"""
+features = [
+  "Öffnet eine Parquet-Datei mit Millionen Zeilen sofort und liest nur den sichtbaren Teil.",
+  "Zeigt jeden Wert nach seinem Typ: Zeitstempel in ihrer Zeitzone, Dezimalzahlen mit Nachkommastellen, Verschachteltes als JSON, Null als eigene Markierung.",
+  "Der Dateifuß neben dem Raster: Schema, Zeilengruppen, schreibendes Programm, Metadaten sowie Codec, Kodierungen, Größen und Statistiken jeder Spalte.",
+  "Eine Zelle, einen Bereich, eine Spalte oder die ganze Datei mit Zeiger oder Tastatur auswählen.",
+  "Einen Bereich als tabulatorgetrennte Zeilen kopieren, die sich in einer Tabellenkalkulation als Zellen einfügen.",
+  "Jede Zeile oder die ausgewählten Spalten als CSV exportieren und mit einem Klick öffnen.",
+  "Liest Snappy, gzip, Brotli, LZ4 und Zstandard.",
+  "Schreibt nie Parquet. Keine Netzwerkverbindung, kein Konto, keine Telemetrie.",
+  "Auf Deutsch und Englisch. Open Source unter der MIT-Lizenz.",
+]
+keywords = [
+  "parquet",
+  "arrow",
+  "spaltenorientiert",
+  "Daten",
+  "Betrachter",
+  "csv",
+  "Schema",
+]
