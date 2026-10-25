@@ -2,9 +2,10 @@
 
 A desktop viewer for Apache Parquet files.
 
-Parkett opens a `.parquet` file and shows what it says about itself, from its
-schema and row groups down to each column's codec, encodings, sizes and
-statistics. It reads Parquet and never writes it, because a Parquet file is
+Parkett opens a `.parquet` file as a grid that scrolls through millions of rows
+at the speed of the window, reading only the stretch in view, and beside it, on
+request, what the file says about itself, from its schema and row groups down
+to each column's codec, encodings, sizes and statistics. It reads Parquet and never writes it, because a Parquet file is
 written once by whatever produced it and a viewer that changed one would hand
 back a different file under the same name.
 

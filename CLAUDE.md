@@ -2,13 +2,15 @@
 
 A desktop viewer for Apache Parquet files, on egui and eframe. `DESIGN.md` is the
 authority on the application; read the section a change touches before making it.
-`src/lib.rs` reads files and knows nothing of a window; `src/main.rs` is the window.
+The library (`src/lib.rs` and its modules) reads files and knows nothing of a window;
+`src/main.rs` and `src/grid.rs` are the window.
 
 ## Commands
 
     cargo build --release
     cargo test
     cargo clippy --all-targets        # must be silent
+    cargo run --release --example sample -- out.parquet [rows]   # a large file to look at
 
 There is no Windows cross-check from Linux: `zstd-sys` compiles C for the target
 and needs the MSVC tools, so a Windows check runs on the Windows machine.

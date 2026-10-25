@@ -21,13 +21,15 @@ path = "src/main.rs"
 # Default features: the Arrow reader and every codec. Zstandard compiles C;
 # DESIGN.md §2.
 parquet = "60.0.0"
+# `chrono-tz` for timestamps in a named zone. DESIGN.md §5.
+arrow-array = { version = "60.0.0", features = ["chrono-tz"] }
+arrow-schema = "60.0.0"
+arrow-select = "60.0.0"
 eframe = "0.36"
 portal-theme = "0.1"
 rfd = "0.17"
 
 [dev-dependencies]
-arrow-array = "60.0.0"
-arrow-schema = "60.0.0"
 tempfile = "3.27"
 
 [profile.release]

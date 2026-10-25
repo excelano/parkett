@@ -16,7 +16,7 @@ an export (§7), which is a new file in another format.
 
 It is one binary over egui and eframe, packaged for apt, the Microsoft Store
 and the Mac App Store the way the fleet's other egui applications are.
-`src/lib.rs` reads files and knows nothing of a window, and is
+The library, `src/lib.rs` and its modules, reads files and knows nothing of a window, and is
 `forbid(unsafe_code)`; `src/main.rs` is the window.
 
 ## §2 What the build depends on
@@ -96,15 +96,22 @@ the bar beside the grid is Parkett's own and maps its length onto the row count,
 and egui is only ever asked to place the rows in view, at offsets of a screen
 or less.
 
-Column headers carry the column's name and, beneath it, its type in the words
-§5 uses. Row headers carry the row's number from 1, as a spreadsheet does.
+Columns are as wide as the wider of their header and their first values, up to
+a limit, and a person widens or narrows one by dragging its header's edge; a
+value wider than its column is cut at the edge, as a spreadsheet's is. Numbers
+are set right and everything else left. Column headers carry the column's name
+and, beneath it, its type in the words §5 uses. Row headers carry the row's
+number from 1, as a spreadsheet does. One cell is selected at a time, with the
+pointer or the arrow keys, Page Up and Down, Home and End, and with Ctrl the
+edges of the file.
 
 ## §5 Values
 
 A value is shown in the form its logical type gives it, not its physical one,
 and Parkett formats each one itself from the Arrow array rather than through
-`arrow-cast`. A timestamp is a date and time: one adjusted to UTC is shown in
-UTC and marked as such, one in a named zone is shown in that zone from the time
+`arrow-cast`. A timestamp is a date and time to the precision its unit records, so a
+column of them lines up: one adjusted to UTC is shown in UTC and marked as
+such, one in a named zone is shown in that zone with its offset, from the time
 zone database `chrono-tz` carries, and one with no zone is shown as written. The
 deprecated 96-bit timestamps are read as timestamps rather than as numbers. A decimal keeps its scale. A date is a
 date. A string is text, and binary that is not marked as text is shown as
@@ -114,13 +121,14 @@ Null is drawn as a faint mark rather than as empty text, so that a null and an e
 string can be told apart at a glance.
 
 A nested value, a list, a struct or a map, is shown in the cell as compact JSON
-cut to the cell's width. Selecting the cell shows it whole and indented in a
-pane beneath the grid. Columns are not flattened into one per leaf; the grid
+cut to the cell's width. The selected cell, of any type, is shown whole beneath the
+grid, with a nested value indented, where its text can be selected. Columns are not flattened into one per leaf; the grid
 has the columns the schema has at its top level.
 
 ## §6 The file panel
 
-A side panel describes the file from its footer and needs no values decoded.
+A side panel, opened from the View menu and closed until it is, describes the
+file from its footer and needs no values decoded.
 It shows the schema as a tree with each field's physical type, logical type and
 whether it may be null; the row count, the number of row groups and their
 sizes; the writer the file names; the key and value metadata the producer
