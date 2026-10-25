@@ -27,6 +27,8 @@ arrow-select = "60.0.0"
 eframe = "0.36"
 portal-theme = "0.1"
 rfd = "0.17"
+# Hands an exported file to whatever the platform opens it with.
+opener = "0.8"
 
 [dev-dependencies]
 tempfile = "3.27"

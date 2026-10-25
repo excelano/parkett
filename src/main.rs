@@ -98,6 +98,8 @@ struct Export {
     cancel: Arc<AtomicBool>,
     finished: mpsc::Receiver<Result<Exported, String>>,
     outcome: Option<Result<Exported, String>>,
+    /// Why the platform would not open what was written.
+    unopened: Option<String>,
 }
 
 impl Export {
@@ -109,7 +111,7 @@ impl Export {
             let _ = send.send(parkett::export::csv(&table_, &columns, &to_, &progress_, &cancel_));
             ctx.request_repaint();
         });
-        Self { to, rows: table.rows(), progress, cancel, finished, outcome: None }
+        Self { to, rows: table.rows(), progress, cancel, finished, outcome: None, unopened: None }
     }
 
     fn running(&self) -> bool {
@@ -339,7 +341,13 @@ fn export_strip(ui: &mut egui::Ui, export: &mut Option<Export>) {
                     Ok(Exported::Cancelled) => ui.label("Export cancelled; nothing was written."),
                     Err(error) => ui.label(RichText::new(format!("The export failed: {error}")).color(ui.visuals().warn_fg_color)),
                 };
+                if matches!(outcome, Ok(Exported::Written)) && ui.button("Open").clicked() {
+                    running.unopened = opener::open(&running.to).err().map(|e| e.to_string());
+                }
                 dismiss = ui.button("Dismiss").clicked();
+                if let Some(error) = &running.unopened {
+                    ui.label(RichText::new(format!("It could not be opened: {error}")).color(ui.visuals().warn_fg_color));
+                }
             }
         });
     });
