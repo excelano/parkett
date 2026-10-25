@@ -178,16 +178,22 @@ impl Grid {
             ui.ctx().set_cursor_icon(CursorIcon::ResizeHorizontal);
         }
 
-        if response.drag_started() {
-            self.drag = if let Some(column) = resizing {
-                Some(Drag::Resize { column, from: at.x, width: self.widths[column] })
-            } else if layout.vertical.contains(at) {
+        // A drag is reported only once the pointer has moved, so what it grabbed
+        // is decided where the button went down.
+        if response.drag_started()
+            && let Some(pressed) = ui.input(|i| i.pointer.press_origin())
+        {
+            self.drag = if let Some(column) = self.edge_at(layout, pressed) {
+                Some(Drag::Resize { column, from: pressed.x, width: self.widths[column] })
+            } else if layout.vertical.contains(pressed) {
                 let (thumb, _) = self.vertical_thumb(layout, rows);
-                let grab = if thumb.y_range().contains(at.y) { at.y - thumb.top() } else { thumb.height() / 2.0 };
+                let grab =
+                    if thumb.y_range().contains(pressed.y) { pressed.y - thumb.top() } else { thumb.height() / 2.0 };
                 Some(Drag::Vertical { grab })
-            } else if layout.horizontal.contains(at) {
+            } else if layout.horizontal.contains(pressed) {
                 let (thumb, _) = self.horizontal_thumb(layout);
-                let grab = if thumb.x_range().contains(at.x) { at.x - thumb.left() } else { thumb.width() / 2.0 };
+                let grab =
+                    if thumb.x_range().contains(pressed.x) { pressed.x - thumb.left() } else { thumb.width() / 2.0 };
                 Some(Drag::Horizontal { grab })
             } else {
                 None
@@ -343,6 +349,7 @@ impl Grid {
         let visuals = ui.visuals();
         let painter = ui.painter_at(layout.header.union(layout.numbers).union(layout.body).union(layout.horizontal).union(layout.vertical));
         let visible = self.visible(layout, table.rows());
+        painter.rect_filled(painter.clip_rect(), 0.0, visuals.panel_fill);
         painter.rect_filled(layout.body, 0.0, visuals.extreme_bg_color);
         let wanted = self.paint_cells(&painter, visuals, layout, &visible, table, blocks, font);
         self.paint_header(&painter, visuals, layout, &visible, table, font);
@@ -368,7 +375,7 @@ impl Grid {
     ) -> Vec<BlockId> {
         let line = Stroke::new(1.0, visuals.widgets.noninteractive.bg_stroke.color);
         let small = FontId::new(font.size * 0.85, font.family.clone());
-        let stripe = visuals.faint_bg_color.gamma_multiply(0.5);
+        let stripe = stripe(visuals);
         let body = painter.with_clip_rect(layout.body);
         let mut wanted = Vec::new();
         let mut want = |id: BlockId| {
@@ -436,7 +443,7 @@ impl Grid {
         let line = Stroke::new(1.0, visuals.widgets.noninteractive.bg_stroke.color);
         let small = FontId::new(font.size * 0.85, font.family.clone());
         let header = painter.with_clip_rect(layout.header);
-        header.rect_filled(layout.header, 0.0, visuals.faint_bg_color);
+        header.rect_filled(layout.header, 0.0, chrome(visuals));
         for &c in &visible.columns {
             let x = self.x_of(layout, c);
             let top = layout.header.top();
@@ -455,7 +462,7 @@ impl Grid {
     fn paint_numbers(&self, painter: &Painter, visuals: &Visuals, layout: &Layout, visible: &Visible, font: &FontId) {
         let line = Stroke::new(1.0, visuals.widgets.noninteractive.bg_stroke.color);
         let numbers = painter.with_clip_rect(layout.numbers);
-        numbers.rect_filled(layout.numbers, 0.0, visuals.faint_bg_color);
+        numbers.rect_filled(layout.numbers, 0.0, chrome(visuals));
         for r in visible.rows() {
             let at = pos2(layout.numbers.right() - PADDING, visible.y_of(layout, r) + layout.row / 2.0);
             let color = if self.selected.is_some_and(|(row, _)| row == r) {
@@ -467,7 +474,7 @@ impl Grid {
         }
         numbers.line_segment([layout.numbers.right_top(), layout.numbers.right_bottom()], line);
         let corner = Rect::from_min_max(pos2(layout.numbers.left(), layout.header.top()), layout.header.left_bottom());
-        painter.rect_filled(corner, 0.0, visuals.faint_bg_color);
+        painter.rect_filled(corner, 0.0, chrome(visuals));
     }
 }
 
@@ -488,6 +495,16 @@ impl Visible {
     fn y_of(&self, layout: &Layout, row: u64) -> f32 {
         layout.body.top() + ((row - self.first) as f32 - self.fraction) * layout.row
     }
+}
+
+/// The headers' fill, set apart from the body in either theme.
+fn chrome(visuals: &Visuals) -> Color32 {
+    if visuals.dark_mode { Color32::from_gray(32) } else { Color32::from_gray(236) }
+}
+
+/// Every other row's tint, which has to darken a light body and lighten a dark one.
+fn stripe(visuals: &Visuals) -> Color32 {
+    if visuals.dark_mode { Color32::from_white_alpha(6) } else { Color32::from_black_alpha(8) }
 }
 
 fn kind(table: &Table, column: usize) -> &str {
