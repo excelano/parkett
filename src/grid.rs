@@ -7,11 +7,14 @@
 // conversion between them and row indexes is bounded by the row count.
 #![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss)]
 
+use std::ops::RangeInclusive;
+
+use eframe::egui::text::{LayoutJob, TextWrapping};
 use eframe::egui::{
     self, Align2, Color32, CursorIcon, Event, FontId, Key, Painter, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, Visuals,
     pos2, vec2,
 };
-use parkett::{BlockId, Blocks, Table, values};
+use parkett::{BlockId, Blocks, Table, copy, values};
 
 const BAR: f32 = 10.0;
 const PADDING: f32 = 6.0;
@@ -24,10 +27,37 @@ const FIT_SAMPLE: usize = 200;
 /// How much of a value one cell lays out.
 const CELL_CHARACTERS: usize = 400;
 
+/// A rectangle of cells: the cell it was begun from, and the cell it reaches,
+/// which is the one the keys move and the pane beneath the grid shows.
+#[derive(Clone, Copy)]
+pub struct Selection {
+    pub anchor: (u64, usize),
+    pub cursor: (u64, usize),
+}
+
+impl Selection {
+    fn cell(at: (u64, usize)) -> Self {
+        Self { anchor: at, cursor: at }
+    }
+
+    pub fn rows(&self) -> RangeInclusive<u64> {
+        self.anchor.0.min(self.cursor.0)..=self.anchor.0.max(self.cursor.0)
+    }
+
+    pub fn columns(&self) -> RangeInclusive<usize> {
+        self.anchor.1.min(self.cursor.1)..=self.anchor.1.max(self.cursor.1)
+    }
+
+    pub fn is_cell(&self) -> bool {
+        self.anchor == self.cursor
+    }
+}
+
 enum Drag {
     Vertical { grab: f32 },
     Horizontal { grab: f32 },
     Resize { column: usize, from: f32, width: f32 },
+    Select,
 }
 
 pub struct Grid {
@@ -37,7 +67,9 @@ pub struct Grid {
     widths: Vec<f32>,
     fitted: Vec<bool>,
     numeric: Vec<bool>,
-    pub selected: Option<(u64, usize)>,
+    pub selection: Option<Selection>,
+    /// Why the last copy put nothing on the clipboard.
+    pub notice: Option<String>,
     drag: Option<Drag>,
 }
 
@@ -46,6 +78,7 @@ struct Layout {
     header: Rect,
     numbers: Rect,
     body: Rect,
+    corner: Rect,
     vertical: Rect,
     horizontal: Rect,
     row: f32,
@@ -80,7 +113,8 @@ impl Grid {
             widths: Vec::new(),
             fitted: vec![false; table.names.len()],
             numeric: table.types.iter().map(values::is_numeric).collect(),
-            selected: None,
+            selection: None,
+            notice: None,
             drag: None,
         }
     }
@@ -91,7 +125,7 @@ impl Grid {
         if self.widths.is_empty() {
             self.widths = (0..table.names.len()).map(|c| header_width(ui, table, c, &font)).collect();
         }
-        self.fit(ui, table, blocks, &font);
+        self.fit_first_values(ui, table, blocks, &font);
 
         let area = ui.available_rect_before_wrap();
         let response = ui.allocate_rect(area, Sense::click_and_drag());
@@ -99,12 +133,9 @@ impl Grid {
         let rows = table.rows();
 
         self.scroll(ui, &response, &layout);
-        self.pointer(ui, &response, &layout, rows);
+        self.pointer(ui, &response, &layout, table, blocks, &font);
         self.keys(ui, &layout, table);
-        let copy = !ui.ctx().egui_wants_keyboard_input() && ui.input(|i| i.events.iter().any(|e| matches!(e, Event::Copy)));
-        if copy && let Some(Ok(Some(text))) = self.selected_value(table, blocks, false) {
-            ui.ctx().copy_text(text);
-        }
+        self.copy(ui, table, blocks);
         self.top = self.top.clamp(0.0, layout.max_top(rows));
         self.left = self.left.clamp(0.0, layout.max_left());
 
@@ -131,6 +162,7 @@ impl Grid {
             header: Rect::from_min_max(pos2(left, area.top()), pos2(right, top)),
             numbers: Rect::from_min_max(pos2(area.left(), top), pos2(left, bottom)),
             body: Rect::from_min_max(pos2(left, top), pos2(right, bottom)),
+            corner: Rect::from_min_max(area.left_top(), pos2(left, top)),
             vertical: Rect::from_min_max(pos2(right, top), pos2(area.right(), bottom)),
             horizontal: Rect::from_min_max(pos2(left, bottom), pos2(right, area.bottom())),
             row,
@@ -139,7 +171,7 @@ impl Grid {
     }
 
     /// Widen each column on screen to fit the first of its values, once.
-    fn fit(&mut self, ui: &Ui, table: &Table, blocks: &mut Blocks, font: &FontId) {
+    fn fit_first_values(&mut self, ui: &Ui, table: &Table, blocks: &mut Blocks, font: &FontId) {
         for column in 0..table.names.len() {
             if self.fitted[column] || table.rows() == 0 {
                 continue;
@@ -148,13 +180,26 @@ impl Grid {
             let Some(decoded) = blocks.get(id) else { continue };
             self.fitted[column] = true;
             let Ok(array) = decoded else { continue };
-            let widest = (0..array.len().min(FIT_SAMPLE))
-                .filter_map(|row| values::text(array.as_ref(), row))
-                .map(|text| measure(ui, &one_line(&text), font))
-                .fold(0.0_f32, f32::max);
-            let width = (widest + 2.0 * PADDING).min(MAX_FITTED_WIDTH);
-            self.widths[column] = self.widths[column].max(width);
+            let widest = widest(ui, font, (0..array.len().min(FIT_SAMPLE)).filter_map(|row| values::text(array.as_ref(), row)));
+            self.widths[column] = self.widths[column].max((widest + 2.0 * PADDING).min(MAX_FITTED_WIDTH));
         }
+    }
+
+    /// Fit a column to its header and to the values in view, however wide.
+    fn fit_to_view(&mut self, ui: &Ui, layout: &Layout, table: &Table, blocks: &mut Blocks, font: &FontId, column: usize) {
+        let visible = self.visible(layout, table.rows());
+        let texts: Vec<String> = visible
+            .rows()
+            .filter_map(|row| {
+                let (id, offset) = table.block_of(column, row);
+                match blocks.get(id) {
+                    Some(Ok(array)) => values::text(array.as_ref(), offset),
+                    _ => None,
+                }
+            })
+            .collect();
+        let widest = widest(ui, font, texts.into_iter());
+        self.widths[column] = (widest + 2.0 * PADDING).max(header_width(ui, table, column, font));
     }
 
     fn scroll(&mut self, ui: &Ui, response: &egui::Response, layout: &Layout) {
@@ -169,19 +214,45 @@ impl Grid {
         self.left -= delta.x;
     }
 
-    fn pointer(&mut self, ui: &Ui, response: &egui::Response, layout: &Layout, rows: u64) {
+    /// The cell under `at`, held to the grid's edges when `clamped`.
+    fn cell_at(&self, layout: &Layout, at: Pos2, rows: u64, clamped: bool) -> Option<(u64, usize)> {
+        if rows == 0 || self.widths.is_empty() {
+            return None;
+        }
+        let row = (self.top + f64::from((at.y - layout.body.top()) / layout.row)).floor();
+        let x = at.x - layout.body.left() + self.left;
+        if clamped {
+            let row = row.clamp(0.0, (rows - 1) as f64) as u64;
+            let last = self.widths.len() - 1;
+            let column = layout.column_at(x).unwrap_or(if x < 0.0 { 0 } else { last });
+            return Some((row, column));
+        }
+        let column = layout.column_at(x)?;
+        (row >= 0.0 && (row as u64) < rows).then_some((row as u64, column))
+    }
+
+    fn pointer(&mut self, ui: &Ui, response: &egui::Response, layout: &Layout, table: &Table, blocks: &mut Blocks, font: &FontId) {
+        let rows = table.rows();
         let Some(at) = response.interact_pointer_pos().or_else(|| response.hover_pos()) else {
             return;
         };
-        let resizing = self.edge_at(layout, at);
-        if resizing.is_some() || matches!(self.drag, Some(Drag::Resize { .. })) {
+        if self.edge_at(layout, at).is_some() || matches!(self.drag, Some(Drag::Resize { .. })) {
             ui.ctx().set_cursor_icon(CursorIcon::ResizeHorizontal);
+        }
+        let shift = ui.input(|i| i.modifiers.shift);
+        let pressed = ui.input(|i| i.pointer.press_origin());
+
+        if response.double_clicked()
+            && let Some(column) = pressed.and_then(|p| self.edge_at(layout, p))
+        {
+            self.fit_to_view(ui, layout, table, blocks, font, column);
+            return;
         }
 
         // A drag is reported only once the pointer has moved, so what it grabbed
         // is decided where the button went down.
         if response.drag_started()
-            && let Some(pressed) = ui.input(|i| i.pointer.press_origin())
+            && let Some(pressed) = pressed
         {
             self.drag = if let Some(column) = self.edge_at(layout, pressed) {
                 Some(Drag::Resize { column, from: pressed.x, width: self.widths[column] })
@@ -195,6 +266,9 @@ impl Grid {
                 let grab =
                     if thumb.x_range().contains(pressed.x) { pressed.x - thumb.left() } else { thumb.width() / 2.0 };
                 Some(Drag::Horizontal { grab })
+            } else if let Some(cell) = layout.body.contains(pressed).then(|| self.cell_at(layout, pressed, rows, false)).flatten() {
+                self.select(cell, shift);
+                Some(Drag::Select)
             } else {
                 None
             };
@@ -220,19 +294,72 @@ impl Grid {
                     self.left = fraction * layout.max_left();
                 }
             }
+            Some(Drag::Select) => {
+                self.scroll_toward(ui, layout, at);
+                if let (Some(cell), Some(selection)) = (self.cell_at(layout, at, rows, true), &mut self.selection) {
+                    selection.cursor = cell;
+                }
+            }
             None => {}
         }
 
-        if response.clicked() && layout.body.contains(at) {
-            let offset = f64::from((at.y - layout.body.top()) / layout.row);
-            let row = (self.top + offset).floor();
-            if let Some(column) = layout.column_at(at.x - layout.body.left() + self.left)
-                && row >= 0.0
-                && (row as u64) < rows
-            {
-                self.selected = Some((row as u64, column));
-            }
+        if response.clicked() {
+            self.click(layout, at, table, shift);
         }
+    }
+
+    /// A drag past the body's edge scrolls the grid toward it.
+    fn scroll_toward(&mut self, ui: &Ui, layout: &Layout, at: Pos2) {
+        let body = layout.body;
+        let beyond = vec2(
+            if at.x < body.left() { at.x - body.left() } else { (at.x - body.right()).max(0.0) },
+            if at.y < body.top() { at.y - body.top() } else { (at.y - body.bottom()).max(0.0) },
+        );
+        if beyond != egui::Vec2::ZERO {
+            self.top += f64::from(beyond.y / layout.row * 0.25);
+            self.left += beyond.x * 0.25;
+            ui.ctx().request_repaint();
+        }
+    }
+
+    fn click(&mut self, layout: &Layout, at: Pos2, table: &Table, shift: bool) {
+        let rows = table.rows();
+        let columns = table.names.len();
+        if rows == 0 || columns == 0 {
+            return;
+        }
+        if layout.body.contains(at) {
+            if let Some(cell) = self.cell_at(layout, at, rows, false) {
+                self.select(cell, shift);
+            }
+        } else if layout.header.contains(at) && self.edge_at(layout, at).is_none() {
+            if let Some(column) = layout.column_at(at.x - layout.header.left() + self.left) {
+                let anchor = match (shift, self.selection) {
+                    (true, Some(selection)) => (0, selection.anchor.1),
+                    _ => (0, column),
+                };
+                self.selection = Some(Selection { anchor, cursor: (rows - 1, column) });
+            }
+        } else if layout.numbers.contains(at) {
+            let row = (self.top + f64::from((at.y - layout.body.top()) / layout.row)).floor();
+            if row >= 0.0 && (row as u64) < rows {
+                let row = row as u64;
+                let anchor = match (shift, self.selection) {
+                    (true, Some(selection)) => (selection.anchor.0, 0),
+                    _ => (row, 0),
+                };
+                self.selection = Some(Selection { anchor, cursor: (row, columns - 1) });
+            }
+        } else if layout.corner.contains(at) {
+            self.selection = Some(Selection { anchor: (0, 0), cursor: (rows - 1, columns - 1) });
+        }
+    }
+
+    fn select(&mut self, cell: (u64, usize), extend: bool) {
+        self.selection = match (extend, self.selection) {
+            (true, Some(selection)) => Some(Selection { anchor: selection.anchor, cursor: cell }),
+            _ => Some(Selection::cell(cell)),
+        };
     }
 
     /// The column whose right edge the pointer is on, within the header.
@@ -276,10 +403,10 @@ impl Grid {
             return;
         }
         let page = (layout.visible_rows().floor() as u64).saturating_sub(1).max(1);
-        let (row, column) = self.selected.unwrap_or((self.top.floor() as u64, 0));
-        let moved = ui.input(|i| {
+        let (row, column) = self.selection.map_or((self.top.floor() as u64, 0), |s| s.cursor);
+        let (moved, shift, all, collapse) = ui.input(|i| {
             let command = i.modifiers.command;
-            if i.key_pressed(Key::ArrowDown) {
+            let moved = if i.key_pressed(Key::ArrowDown) {
                 Some((if command { rows - 1 } else { (row + 1).min(rows - 1) }, column))
             } else if i.key_pressed(Key::ArrowUp) {
                 Some((if command { 0 } else { row.saturating_sub(1) }, column))
@@ -297,29 +424,60 @@ impl Grid {
                 Some((if command { rows - 1 } else { row }, columns - 1))
             } else {
                 None
-            }
+            };
+            (moved, i.modifiers.shift, command && i.key_pressed(Key::A), i.key_pressed(Key::Escape))
         });
-        if let Some((row, column)) = moved {
-            self.selected = Some((row, column));
-            let visible = layout.visible_rows().floor().max(1.0);
-            if (row as f64) < self.top {
-                self.top = row as f64;
-            } else if row as f64 + 1.0 > self.top + visible {
-                self.top = row as f64 + 1.0 - visible;
-            }
-            let (start, end) = (layout.starts[column], layout.starts[column + 1]);
-            if start < self.left {
-                self.left = start;
-            } else if end > self.left + layout.body.width() {
-                self.left = (end - layout.body.width()).min(start);
-            }
+        if all {
+            self.selection = Some(Selection { anchor: (0, 0), cursor: (rows - 1, columns - 1) });
+        }
+        if collapse && let Some(selection) = &mut self.selection {
+            selection.anchor = selection.cursor;
+        }
+        if let Some(cell) = moved {
+            self.select(cell, shift);
+            self.reveal(layout, cell);
         }
     }
 
-    /// The selected cell's value, whole when `whole`: `None` while its block
+    /// Scroll so that `cell` is in view.
+    fn reveal(&mut self, layout: &Layout, (row, column): (u64, usize)) {
+        let visible = layout.visible_rows().floor().max(1.0);
+        if (row as f64) < self.top {
+            self.top = row as f64;
+        } else if row as f64 + 1.0 > self.top + visible {
+            self.top = row as f64 + 1.0 - visible;
+        }
+        let (start, end) = (layout.starts[column], layout.starts[column + 1]);
+        if start < self.left {
+            self.left = start;
+        } else if end > self.left + layout.body.width() {
+            self.left = (end - layout.body.width()).min(start);
+        }
+    }
+
+    /// Put the selection on the clipboard: one cell as its text, a range as
+    /// tab-separated rows. DESIGN.md §7.
+    fn copy(&mut self, ui: &Ui, table: &Table, blocks: &mut Blocks) {
+        let asked = !ui.ctx().egui_wants_keyboard_input() && ui.input(|i| i.events.iter().any(|e| matches!(e, Event::Copy)));
+        let Some(selection) = self.selection.filter(|_| asked) else { return };
+        self.notice = None;
+        let copied = if selection.is_cell() {
+            let (row, column) = selection.cursor;
+            let (id, offset) = table.block_of(column, row);
+            blocks.array(table, id).map(|array| values::text(array.as_ref(), offset).unwrap_or_default())
+        } else {
+            copy::tab_separated(table, blocks, selection.rows(), selection.columns())
+        };
+        match copied {
+            Ok(text) => ui.ctx().copy_text(text),
+            Err(error) => self.notice = Some(error),
+        }
+    }
+
+    /// The cursor cell's value, whole when `whole`: `None` while its block
     /// is decoding, and `Ok(None)` for null.
-    pub fn selected_value(&self, table: &Table, blocks: &mut Blocks, whole: bool) -> Option<Result<Option<String>, String>> {
-        let (row, column) = self.selected?;
+    pub fn cursor_value(&self, table: &Table, blocks: &mut Blocks, whole: bool) -> Option<Result<Option<String>, String>> {
+        let (row, column) = self.selection?.cursor;
         let (id, offset) = table.block_of(column, row);
         Some(match blocks.get(id)? {
             Ok(array) if whole => Ok(values::whole(array.as_ref(), offset)),
@@ -352,6 +510,7 @@ impl Grid {
         painter.rect_filled(painter.clip_rect(), 0.0, visuals.panel_fill);
         painter.rect_filled(layout.body, 0.0, visuals.extreme_bg_color);
         let wanted = self.paint_cells(&painter, visuals, layout, &visible, table, blocks, font);
+        self.paint_selection(&painter, visuals, layout, &visible);
         self.paint_header(&painter, visuals, layout, &visible, table, font);
         self.paint_numbers(&painter, visuals, layout, &visible, font);
         let thumb_color = visuals.widgets.inactive.bg_fill;
@@ -375,7 +534,6 @@ impl Grid {
     ) -> Vec<BlockId> {
         let line = Stroke::new(1.0, visuals.widgets.noninteractive.bg_stroke.color);
         let small = FontId::new(font.size * 0.85, font.family.clone());
-        let stripe = stripe(visuals);
         let body = painter.with_clip_rect(layout.body);
         let mut wanted = Vec::new();
         let mut want = |id: BlockId| {
@@ -388,7 +546,7 @@ impl Grid {
             let y = visible.y_of(layout, r);
             if r % 2 == 1 {
                 let band = Rect::from_min_size(pos2(layout.body.left(), y), vec2(layout.body.width(), layout.row));
-                body.rect_filled(band, 0.0, stripe);
+                body.rect_filled(band, 0.0, stripe(visuals));
             }
             for &c in &visible.columns {
                 let cell = Rect::from_min_size(pos2(self.x_of(layout, c), y), vec2(self.widths[c], layout.row));
@@ -401,18 +559,10 @@ impl Grid {
                     Some(Ok(array)) => values::text(array.as_ref(), offset).map(|t| one_line(&t)),
                     Some(Err(_)) => Some("⚠".to_owned()),
                 };
-                let inside = painter.with_clip_rect(cell.shrink2(vec2(PADDING, 0.0)).intersect(layout.body));
-                let (left, right) = (pos2(cell.left() + PADDING, cell.center().y), pos2(cell.right() - PADDING, cell.center().y));
+                let inside = painter.with_clip_rect(cell.intersect(layout.body));
                 match shown {
-                    Some(text) if self.numeric[c] => {
-                        inside.text(right, Align2::RIGHT_CENTER, text, font.clone(), visuals.text_color());
-                    }
-                    Some(text) => {
-                        inside.text(left, Align2::LEFT_CENTER, text, font.clone(), visuals.text_color());
-                    }
-                    None => {
-                        inside.text(left, Align2::LEFT_CENTER, "null", small.clone(), visuals.weak_text_color().gamma_multiply(0.6));
-                    }
+                    Some(text) => fitted(&inside, cell, text, font, visuals.text_color(), self.numeric[c]),
+                    None => fitted(&inside, cell, "null".to_owned(), &small, visuals.weak_text_color().gamma_multiply(0.6), false),
                 }
             }
         }
@@ -428,15 +578,29 @@ impl Grid {
             let x = self.x_of(layout, c) + self.widths[c];
             body.line_segment([pos2(x, layout.body.top()), pos2(x, layout.body.bottom())], line);
         }
-        if let Some((row, column)) = self.selected
-            && visible.rows().contains(&row)
-        {
-            let at = pos2(self.x_of(layout, column), visible.y_of(layout, row));
-            let cell = Rect::from_min_size(at, vec2(self.widths[column], layout.row));
-            let selection = visuals.selection;
-            body.rect(cell, 0.0, selection.bg_fill.gamma_multiply(0.25), selection.stroke, StrokeKind::Inside);
-        }
         wanted
+    }
+
+    fn paint_selection(&self, painter: &Painter, visuals: &Visuals, layout: &Layout, visible: &Visible) {
+        let Some(selection) = self.selection else { return };
+        let body = painter.with_clip_rect(layout.body);
+        let (rows, columns) = (selection.rows(), selection.columns());
+        let shown = visible.rows();
+        let first = (*rows.start()).max(shown.start);
+        let last = (*rows.end()).min(shown.end.saturating_sub(1));
+        if first <= last && !shown.is_empty() {
+            let left = self.x_of(layout, *columns.start());
+            let right = self.x_of(layout, *columns.end()) + self.widths[*columns.end()];
+            let top = visible.y_of(layout, first);
+            let bottom = visible.y_of(layout, last) + layout.row;
+            let range = Rect::from_min_max(pos2(left, top), pos2(right, bottom));
+            body.rect(range, 0.0, visuals.selection.bg_fill.gamma_multiply(0.2), Stroke::NONE, StrokeKind::Inside);
+        }
+        let (row, column) = selection.cursor;
+        if shown.contains(&row) {
+            let cell = Rect::from_min_size(pos2(self.x_of(layout, column), visible.y_of(layout, row)), vec2(self.widths[column], layout.row));
+            body.rect_stroke(cell, 0.0, visuals.selection.stroke, StrokeKind::Inside);
+        }
     }
 
     fn paint_header(&self, painter: &Painter, visuals: &Visuals, layout: &Layout, visible: &Visible, table: &Table, font: &FontId) {
@@ -444,17 +608,20 @@ impl Grid {
         let small = FontId::new(font.size * 0.85, font.family.clone());
         let header = painter.with_clip_rect(layout.header);
         header.rect_filled(layout.header, 0.0, chrome(visuals));
+        let selected = self.selection.map(|s| s.columns());
         for &c in &visible.columns {
             let x = self.x_of(layout, c);
             let top = layout.header.top();
-            let clip = Rect::from_min_size(pos2(x, top), vec2(self.widths[c] - PADDING, layout.header.height()));
-            let cell = painter.with_clip_rect(clip.intersect(layout.header));
-            let name = pos2(x + PADDING, top + layout.row * 0.5);
-            cell.text(name, Align2::LEFT_CENTER, &table.names[c], font.clone(), visuals.strong_text_color());
-            let kind_at = pos2(x + PADDING, top + layout.row * 1.4);
-            cell.text(kind_at, Align2::LEFT_CENTER, kind(table, c), small.clone(), visuals.weak_text_color());
-            let edge = x + self.widths[c];
-            header.line_segment([pos2(edge, top), pos2(edge, layout.header.bottom())], line);
+            let column = Rect::from_min_size(pos2(x, top), vec2(self.widths[c], layout.header.height()));
+            if selected.as_ref().is_some_and(|s| s.contains(&c)) {
+                header.rect_filled(column, 0.0, visuals.selection.bg_fill.gamma_multiply(0.25));
+            }
+            let cell = painter.with_clip_rect(column.intersect(layout.header));
+            let name = Rect::from_min_size(column.min, vec2(column.width(), layout.row));
+            fitted(&cell, name, table.names[c].clone(), font, visuals.strong_text_color(), false);
+            let kind_at = Rect::from_min_size(pos2(x, top + layout.row * 0.85), vec2(column.width(), layout.row));
+            fitted(&cell, kind_at, kind(table, c).to_owned(), &small, visuals.weak_text_color(), false);
+            header.line_segment([column.right_top(), column.right_bottom()], line);
         }
         header.line_segment([layout.header.left_bottom(), layout.header.right_bottom()], line);
     }
@@ -463,18 +630,21 @@ impl Grid {
         let line = Stroke::new(1.0, visuals.widgets.noninteractive.bg_stroke.color);
         let numbers = painter.with_clip_rect(layout.numbers);
         numbers.rect_filled(layout.numbers, 0.0, chrome(visuals));
+        let selected = self.selection.map(|s| s.rows());
         for r in visible.rows() {
-            let at = pos2(layout.numbers.right() - PADDING, visible.y_of(layout, r) + layout.row / 2.0);
-            let color = if self.selected.is_some_and(|(row, _)| row == r) {
+            let y = visible.y_of(layout, r);
+            let color = if selected.as_ref().is_some_and(|s| s.contains(&r)) {
+                let band = Rect::from_min_size(pos2(layout.numbers.left(), y), vec2(layout.numbers.width(), layout.row));
+                numbers.rect_filled(band, 0.0, visuals.selection.bg_fill.gamma_multiply(0.25));
                 visuals.text_color()
             } else {
                 visuals.weak_text_color()
             };
+            let at = pos2(layout.numbers.right() - PADDING, y + layout.row / 2.0);
             numbers.text(at, Align2::RIGHT_CENTER, (r + 1).to_string(), font.clone(), color);
         }
         numbers.line_segment([layout.numbers.right_top(), layout.numbers.right_bottom()], line);
-        let corner = Rect::from_min_max(pos2(layout.numbers.left(), layout.header.top()), layout.header.left_bottom());
-        painter.rect_filled(corner, 0.0, chrome(visuals));
+        painter.rect_filled(layout.corner, 0.0, chrome(visuals));
     }
 }
 
@@ -497,6 +667,16 @@ impl Visible {
     }
 }
 
+/// Paint `text` within `cell`, ending in an ellipsis where it does not fit.
+fn fitted(painter: &Painter, cell: Rect, text: String, font: &FontId, color: Color32, right: bool) {
+    let mut job = LayoutJob::simple_singleline(text, font.clone(), color);
+    job.wrap = TextWrapping::truncate_at_width((cell.width() - 2.0 * PADDING).max(0.0));
+    let galley = painter.layout_job(job);
+    let y = cell.center().y - galley.size().y / 2.0;
+    let x = if right { cell.right() - PADDING - galley.size().x } else { cell.left() + PADDING };
+    painter.galley(pos2(x, y), galley, color);
+}
+
 /// The headers' fill, set apart from the body in either theme.
 fn chrome(visuals: &Visuals) -> Color32 {
     if visuals.dark_mode { Color32::from_gray(32) } else { Color32::from_gray(236) }
@@ -516,6 +696,10 @@ fn header_width(ui: &Ui, table: &Table, column: usize, font: &FontId) -> f32 {
     let name = measure(ui, &table.names[column], font);
     let kind = measure(ui, kind(table, column), &small);
     (name.max(kind) + 2.0 * PADDING).clamp(MIN_WIDTH * 2.0, MAX_FITTED_WIDTH)
+}
+
+fn widest(ui: &Ui, font: &FontId, texts: impl Iterator<Item = String>) -> f32 {
+    texts.map(|text| measure(ui, &one_line(&text), font)).fold(0.0, f32::max)
 }
 
 fn measure(ui: &Ui, text: &str, font: &FontId) -> f32 {

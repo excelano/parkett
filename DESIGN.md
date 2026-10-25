@@ -98,12 +98,18 @@ or less.
 
 Columns are as wide as the wider of their header and their first values, up to
 a limit, and a person widens or narrows one by dragging its header's edge; a
-value wider than its column is cut at the edge, as a spreadsheet's is. Numbers
+value wider than its column ends in an ellipsis, and a double-click on the
+header's edge fits the column to its values in view. Numbers
 are set right and everything else left. Column headers carry the column's name
 and, beneath it, its type in the words §5 uses. Row headers carry the row's
-number from 1, as a spreadsheet does. One cell is selected at a time, with the
-pointer or the arrow keys, Page Up and Down, Home and End, and with Ctrl the
-edges of the file.
+number from 1, as a spreadsheet does.
+
+A selection is a rectangle of cells: one cell by a click or the arrow keys, Page
+Up and Down, Home and End, with Ctrl reaching the edges of the file; a range by
+Shift with any of those or by a drag, which scrolls the grid when it passes the
+edge; a column by its header, a row by its number and the file by the corner
+between them, or Ctrl+A. Escape shrinks a range back to its cursor cell, the
+one the keys move and the pane beneath the grid shows.
 
 ## §5 Values
 
@@ -140,10 +146,13 @@ a file-wide answer would need that order applied across them. A minimum and
 maximum written by the writers that compared byte arrays as signed are not
 shown.
 
-## §7 Selection, copy and export
+## §7 Copy and export
 
-A cell or a rectangle of cells is selected with the pointer and the keys the way
-it is in `xods`, and copy hands it over as tab separated rows. Export writes the
+Copy hands one cell over as its text and a range as tab-separated rows, which a
+spreadsheet pastes as cells: a null is an empty field, and a field holding a
+tab, a line break or a quote is quoted. A copy decodes what it needs at once, so
+it is bounded: a range of more than a million cells is refused with a word in
+the pane beneath the grid, since a range that large is an export. Export writes the
 file, or the columns selected, as CSV with a header row, each value in the form
 §5 shows it: a nested value as JSON and binary as hexadecimal, which is also
 what this2that's `parquet2csv` writes, so the two exports of one file agree. It is a new file chosen

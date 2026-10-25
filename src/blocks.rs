@@ -83,6 +83,22 @@ impl Blocks {
         })
     }
 
+    /// A block now: the one that has arrived, or else decoded on this thread.
+    ///
+    /// # Errors
+    ///
+    /// When the block cannot be decoded.
+    pub fn array(&mut self, table: &Table, id: BlockId) -> Result<ArrayRef, String> {
+        if let Some(decoded) = self.get(id) {
+            return decoded.clone();
+        }
+        let decoded = table.read(id);
+        let bytes = decoded.as_ref().map_or(0, Array::get_array_memory_size);
+        self.bytes += bytes;
+        self.cache.insert(id, Entry { decoded: decoded.clone(), bytes, drawn: self.frame });
+        decoded
+    }
+
     /// Ask for these blocks, in this order, in place of whatever was asked before.
     pub fn want(&self, ids: Vec<BlockId>) {
         let mut wanted = self.shared.wanted.lock().unwrap_or_else(PoisonError::into_inner);

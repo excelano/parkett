@@ -7,6 +7,7 @@
 #![warn(clippy::pedantic)]
 
 mod blocks;
+pub mod copy;
 mod footer;
 mod table;
 pub mod values;

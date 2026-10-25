@@ -195,17 +195,33 @@ impl App {
     }
 }
 
-/// The selected cell, whole, beneath the grid. DESIGN.md §5.
+/// The selection beneath the grid: the cursor cell whole, and the size of a
+/// range. DESIGN.md §5.
 fn selected_pane(ui: &mut egui::Ui, view: &mut View) {
-    let Some((row, column)) = view.grid.selected else { return };
-    let value = view.grid.selected_value(&view.table, &mut view.blocks, true);
+    let Some(selection) = view.grid.selection else { return };
+    let (row, column) = selection.cursor;
+    let value = view.grid.cursor_value(&view.table, &mut view.blocks, true);
     let name = &view.table.names[column];
     let kind = view.table.footer.schema.get(column).map_or("", |f| f.kind.as_str());
+    let notice = view.grid.notice.clone();
     egui::Panel::bottom("selected").resizable(true).default_size(90.0).show(ui, |ui| {
         ui.horizontal(|ui| {
             ui.label(RichText::new(format!("Row {}", grouped(row + 1))).strong());
             ui.label(RichText::new(format!("{name} · {kind}")).weak());
+            if !selection.is_cell() {
+                let (rows, columns) = (selection.rows(), selection.columns());
+                let height = rows.end() - rows.start() + 1;
+                let width = (columns.end() - columns.start() + 1) as u64;
+                ui.label(RichText::new(format!(
+                    "· {} rows × {} columns selected",
+                    grouped(height),
+                    grouped(width)
+                )).weak());
+            }
         });
+        if let Some(notice) = notice {
+            ui.label(RichText::new(notice).color(ui.visuals().warn_fg_color));
+        }
         egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| match value {
             None => {
                 ui.label(RichText::new("Reading…").weak());
