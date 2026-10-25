@@ -158,9 +158,10 @@ the pane beneath the grid, since a range that large is an export.
 Export writes every row of the file, or of the columns a selection spans, as
 CSV with a header row: comma-separated, quoted where a value holds a comma, a
 quote or a line break, lines ended by CRLF, as RFC 4180 has it. Each value is
-in the form §5 shows it but for timestamps, which are ISO 8601 (`Z` for UTC,
-the offset for a named zone) because what reads an export is another program
-and a spreadsheet takes the grid's form for text. A null is an empty field, a
+in the form §5 shows it but for timestamps, which are ISO 8601 with no zone
+designator, and one with a zone is written as its UTC instant: a spreadsheet
+takes the grid's form, and any designator, for text. The zone stays in the
+Parquet file's schema, and a program reading the CSV takes the times as UTC. A null is an empty field, a
 nested value is JSON and binary is hexadecimal, the conventions this2that's
 `parquet2csv` also keeps. The destination is chosen in a save dialog and cannot be the file being
 read. The CSV is written beside it under a hidden name and moved into place

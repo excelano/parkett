@@ -98,17 +98,18 @@ fn numbers_and_only_numbers_are_numeric() {
     assert!(!is_numeric(Date32Array::from(vec![1]).data_type()));
 }
 
-/// Catches an export writing timestamps the way the grid shows them, which a
-/// spreadsheet reads as text, or losing the zone on the way to ISO 8601.
+/// Catches an export a spreadsheet reads as text: the grid's form, or a zone
+/// designator, which LibreOffice will not take as a date. A timestamp with a
+/// zone is written as its UTC instant.
 #[test]
-fn an_exported_timestamp_is_iso_8601() {
+fn an_exported_timestamp_is_iso_8601_in_utc_and_unmarked() {
     use parkett::values::exported;
     let instant = 1_700_000_000_123;
     let naive = TimestampMillisecondArray::from(vec![instant]);
     assert_eq!(exported(&naive, 0).unwrap(), "2023-11-14T22:13:20.123");
     let utc = TimestampMillisecondArray::from(vec![instant]).with_timezone("UTC");
-    assert_eq!(exported(&utc, 0).unwrap(), "2023-11-14T22:13:20.123Z");
+    assert_eq!(exported(&utc, 0).unwrap(), "2023-11-14T22:13:20.123");
     let berlin = TimestampMillisecondArray::from(vec![instant]).with_timezone("Europe/Berlin");
-    assert_eq!(exported(&berlin, 0).unwrap(), "2023-11-14T23:13:20.123+01:00");
-    assert_eq!(text(&utc, 0).unwrap(), "2023-11-14 22:13:20.123 UTC");
+    assert_eq!(exported(&berlin, 0).unwrap(), "2023-11-14T22:13:20.123");
+    assert_eq!(text(&berlin, 0).unwrap(), "2023-11-14 23:13:20.123 +01:00");
 }

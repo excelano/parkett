@@ -192,21 +192,23 @@ fn date_time(unit: TimeUnit, iso: bool) -> &'static str {
     }
 }
 
-/// A timestamp in its zone: marked UTC, or with its offset, or as written.
-/// ISO 8601 spells UTC `Z` and puts the offset against the time.
+/// A timestamp in its zone: marked UTC, or with its offset, or as written. In
+/// ISO 8601 for an export, one with a zone is written in UTC and unmarked,
+/// since a spreadsheet takes a zone designator for text; Arrow stores such a
+/// timestamp as its UTC instant already.
 fn timestamp(raw: i64, unit: TimeUnit, zone: Option<&str>, iso: bool) -> String {
     let pattern = date_time(unit, iso);
-    let (utc, offset) = if iso { ("Z", "%:z") } else { (" UTC", " %:z") };
     macro_rules! at {
         ($type:ty) => {
             match zone {
+                _ if iso => as_datetime::<$type>(raw).map(|t| t.format(pattern).to_string()),
                 None => as_datetime::<$type>(raw).map(|t| t.format(pattern).to_string()),
                 Some("UTC" | "Etc/UTC" | "Z" | "+00:00" | "+00") => {
-                    as_datetime::<$type>(raw).map(|t| format!("{}{utc}", t.format(pattern)))
+                    as_datetime::<$type>(raw).map(|t| format!("{} UTC", t.format(pattern)))
                 }
                 Some(zone) => match zone.parse::<Tz>() {
                     Ok(tz) => as_datetime_with_timezone::<$type>(raw, tz)
-                        .map(|t| t.format(&format!("{pattern}{offset}")).to_string()),
+                        .map(|t| t.format(&format!("{pattern} %:z")).to_string()),
                     Err(_) => as_datetime::<$type>(raw).map(|t| format!("{} ({zone}?)", t.format(pattern))),
                 },
             }
