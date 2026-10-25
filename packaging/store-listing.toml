@@ -121,7 +121,7 @@ Parkett ist Open Source unter der MIT-Lizenz: github.com/excelano/parkett.
 """
 
 [locales."de-de".apple]
-name = "Parkett"
+name = "Parkett: Parquet-Betrachter"
 subtitle = "Parquet-Dateien ansehen"
 promotional-text = "Öffnen Sie eine Parquet-Datei mit Millionen Zeilen und scrollen Sie sofort. Schema, Zeilengruppen, Statistiken, Zellen kopieren, CSV exportieren. Alles bleibt lokal."
 keywords = "parquet,arrow,spaltenorientiert,Daten,Betrachter,csv,Schema,Tabelle,spark,pandas,duckdb"
