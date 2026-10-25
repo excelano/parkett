@@ -18,16 +18,34 @@ use arrow_array::types::{
 use arrow_array::{Array, ArrowPrimitiveType};
 use arrow_schema::{DataType, TimeUnit};
 
+/// How a value is written out.
+#[derive(Clone, Copy)]
+struct Form {
+    /// A nested value laid out with this indent, or on one line.
+    indent: Option<usize>,
+    /// Timestamps as ISO 8601, for what another program will read.
+    iso: bool,
+}
+
+const LINE: Form = Form { indent: None, iso: false };
+
 /// The value at `row` on one line, or `None` for null.
 #[must_use]
 pub fn text(array: &dyn Array, row: usize) -> Option<String> {
-    value(array, row, None)
+    value(array, row, LINE)
+}
+
+/// The value at `row` on one line with timestamps in ISO 8601, for an export,
+/// or `None` for null.
+#[must_use]
+pub fn exported(array: &dyn Array, row: usize) -> Option<String> {
+    value(array, row, Form { iso: true, ..LINE })
 }
 
 /// The value at `row` whole, with a nested value indented, or `None` for null.
 #[must_use]
 pub fn whole(array: &dyn Array, row: usize) -> Option<String> {
-    value(array, row, Some(2))
+    value(array, row, Form { indent: Some(2), ..LINE })
 }
 
 /// Whether a column's values are numbers, which the grid sets right-aligned.
@@ -39,19 +57,19 @@ pub fn is_numeric(data_type: &DataType) -> bool {
     }
 }
 
-fn value(array: &dyn Array, row: usize, indent: Option<usize>) -> Option<String> {
+fn value(array: &dyn Array, row: usize, form: Form) -> Option<String> {
     if array.is_null(row) {
         return None;
     }
     if let Some((values, at)) = dictionary_value(array, row) {
-        return value(values, at, indent);
+        return value(values, at, form);
     }
     if is_nested(array.data_type()) {
         let mut out = String::new();
-        json(array, row, &mut out, indent, 0);
+        json(array, row, &mut out, form, 0);
         Some(out)
     } else {
-        scalar(array, row)
+        scalar(array, row, form)
     }
 }
 
@@ -90,7 +108,7 @@ fn primitive<T: ArrowPrimitiveType>(array: &dyn Array, row: usize) -> T::Native 
     array.as_primitive::<T>().value(row)
 }
 
-fn scalar(array: &dyn Array, row: usize) -> Option<String> {
+fn scalar(array: &dyn Array, row: usize, form: Form) -> Option<String> {
     Some(match array.data_type() {
         DataType::Null => return None,
         DataType::Boolean => array.as_boolean().value(row).to_string(),
@@ -135,7 +153,7 @@ fn scalar(array: &dyn Array, row: usize) -> Option<String> {
                 TimeUnit::Microsecond => primitive::<TimestampMicrosecondType>(array, row),
                 TimeUnit::Nanosecond => primitive::<TimestampNanosecondType>(array, row),
             };
-            timestamp(raw, *unit, zone.as_deref())
+            timestamp(raw, *unit, zone.as_deref(), form.iso)
         }
         DataType::Duration(unit) => {
             let duration = match unit {
@@ -161,27 +179,34 @@ fn shown<T: std::fmt::Display>(value: Option<T>) -> String {
 }
 
 /// A timestamp to the precision its unit records.
-fn date_time(unit: TimeUnit) -> &'static str {
-    match unit {
-        TimeUnit::Second => "%Y-%m-%d %H:%M:%S",
-        TimeUnit::Millisecond => "%Y-%m-%d %H:%M:%S%.3f",
-        TimeUnit::Microsecond => "%Y-%m-%d %H:%M:%S%.6f",
-        TimeUnit::Nanosecond => "%Y-%m-%d %H:%M:%S%.9f",
+fn date_time(unit: TimeUnit, iso: bool) -> &'static str {
+    match (unit, iso) {
+        (TimeUnit::Second, false) => "%Y-%m-%d %H:%M:%S",
+        (TimeUnit::Millisecond, false) => "%Y-%m-%d %H:%M:%S%.3f",
+        (TimeUnit::Microsecond, false) => "%Y-%m-%d %H:%M:%S%.6f",
+        (TimeUnit::Nanosecond, false) => "%Y-%m-%d %H:%M:%S%.9f",
+        (TimeUnit::Second, true) => "%Y-%m-%dT%H:%M:%S",
+        (TimeUnit::Millisecond, true) => "%Y-%m-%dT%H:%M:%S%.3f",
+        (TimeUnit::Microsecond, true) => "%Y-%m-%dT%H:%M:%S%.6f",
+        (TimeUnit::Nanosecond, true) => "%Y-%m-%dT%H:%M:%S%.9f",
     }
 }
 
-fn timestamp(raw: i64, unit: TimeUnit, zone: Option<&str>) -> String {
-    let pattern = date_time(unit);
+/// A timestamp in its zone: marked UTC, or with its offset, or as written.
+/// ISO 8601 spells UTC `Z` and puts the offset against the time.
+fn timestamp(raw: i64, unit: TimeUnit, zone: Option<&str>, iso: bool) -> String {
+    let pattern = date_time(unit, iso);
+    let (utc, offset) = if iso { ("Z", "%:z") } else { (" UTC", " %:z") };
     macro_rules! at {
         ($type:ty) => {
             match zone {
                 None => as_datetime::<$type>(raw).map(|t| t.format(pattern).to_string()),
                 Some("UTC" | "Etc/UTC" | "Z" | "+00:00" | "+00") => {
-                    as_datetime::<$type>(raw).map(|t| format!("{} UTC", t.format(pattern)))
+                    as_datetime::<$type>(raw).map(|t| format!("{}{utc}", t.format(pattern)))
                 }
                 Some(zone) => match zone.parse::<Tz>() {
                     Ok(tz) => as_datetime_with_timezone::<$type>(raw, tz)
-                        .map(|t| t.format(&format!("{pattern} %:z")).to_string()),
+                        .map(|t| t.format(&format!("{pattern}{offset}")).to_string()),
                     Err(_) => as_datetime::<$type>(raw).map(|t| format!("{} ({zone}?)", t.format(pattern))),
                 },
             }
@@ -203,41 +228,41 @@ fn hex(bytes: &[u8]) -> String {
     })
 }
 
-/// A value as JSON: compact when `indent` is `None`, else indented by it.
-fn json(array: &dyn Array, row: usize, out: &mut String, indent: Option<usize>, depth: usize) {
+/// A value as JSON: compact, or indented when `form` says so.
+fn json(array: &dyn Array, row: usize, out: &mut String, form: Form, depth: usize) {
     if array.is_null(row) {
         out.push_str("null");
         return;
     }
     if let Some((values, at)) = dictionary_value(array, row) {
-        return json(values, at, out, indent, depth);
+        return json(values, at, out, form, depth);
     }
     match array.data_type() {
         DataType::List(_) => {
             let items = array.as_list::<i32>().value(row);
-            sequence(out, indent, depth, '[', ']', (0..items.len()).map(|i| (None, items.as_ref(), i)));
+            sequence(out, form, depth, '[', ']', (0..items.len()).map(|i| (None, items.as_ref(), i)));
         }
         DataType::LargeList(_) => {
             let items = array.as_list::<i64>().value(row);
-            sequence(out, indent, depth, '[', ']', (0..items.len()).map(|i| (None, items.as_ref(), i)));
+            sequence(out, form, depth, '[', ']', (0..items.len()).map(|i| (None, items.as_ref(), i)));
         }
         DataType::ListView(_) => {
             let items = array.as_list_view::<i32>().value(row);
-            sequence(out, indent, depth, '[', ']', (0..items.len()).map(|i| (None, items.as_ref(), i)));
+            sequence(out, form, depth, '[', ']', (0..items.len()).map(|i| (None, items.as_ref(), i)));
         }
         DataType::LargeListView(_) => {
             let items = array.as_list_view::<i64>().value(row);
-            sequence(out, indent, depth, '[', ']', (0..items.len()).map(|i| (None, items.as_ref(), i)));
+            sequence(out, form, depth, '[', ']', (0..items.len()).map(|i| (None, items.as_ref(), i)));
         }
         DataType::FixedSizeList(..) => {
             let items = array.as_fixed_size_list().value(row);
-            sequence(out, indent, depth, '[', ']', (0..items.len()).map(|i| (None, items.as_ref(), i)));
+            sequence(out, form, depth, '[', ']', (0..items.len()).map(|i| (None, items.as_ref(), i)));
         }
         DataType::Struct(fields) => {
             let record = array.as_struct();
             sequence(
                 out,
-                indent,
+                form,
                 depth,
                 '{',
                 '}',
@@ -251,11 +276,11 @@ fn json(array: &dyn Array, row: usize, out: &mut String, indent: Option<usize>, 
             let (keys, values) = (entries.column(0), entries.column(1));
             sequence(
                 out,
-                indent,
+                form,
                 depth,
                 '{',
                 '}',
-                (0..entries.len()).map(|i| (Some(text(keys.as_ref(), i).unwrap_or_default()), values.as_ref(), i)),
+                (0..entries.len()).map(|i| (Some(value(keys.as_ref(), i, Form { indent: None, ..form }).unwrap_or_default()), values.as_ref(), i)),
             );
         }
         DataType::Boolean
@@ -270,22 +295,22 @@ fn json(array: &dyn Array, row: usize, out: &mut String, indent: Option<usize>, 
         | DataType::Decimal32(..)
         | DataType::Decimal64(..)
         | DataType::Decimal128(..)
-        | DataType::Decimal256(..) => out.push_str(&scalar(array, row).unwrap_or_default()),
+        | DataType::Decimal256(..) => out.push_str(&scalar(array, row, form).unwrap_or_default()),
         DataType::Float16 | DataType::Float32 | DataType::Float64 => {
-            let number = scalar(array, row).unwrap_or_default();
+            let number = scalar(array, row, form).unwrap_or_default();
             if number.parse::<f64>().is_ok_and(f64::is_finite) {
                 out.push_str(&number);
             } else {
                 quoted(out, &number);
             }
         }
-        _ => quoted(out, &scalar(array, row).unwrap_or_default()),
+        _ => quoted(out, &scalar(array, row, form).unwrap_or_default()),
     }
 }
 
 fn sequence<'a>(
     out: &mut String,
-    indent: Option<usize>,
+    form: Form,
     depth: usize,
     open: char,
     close: char,
@@ -296,12 +321,12 @@ fn sequence<'a>(
     for (key, array, row) in items {
         if !empty {
             out.push(',');
-            if indent.is_none() {
+            if form.indent.is_none() {
                 out.push(' ');
             }
         }
         empty = false;
-        if let Some(width) = indent {
+        if let Some(width) = form.indent {
             out.push('\n');
             out.extend(std::iter::repeat_n(' ', width * (depth + 1)));
         }
@@ -309,9 +334,9 @@ fn sequence<'a>(
             quoted(out, &key);
             out.push_str(": ");
         }
-        json(array, row, out, indent, depth + 1);
+        json(array, row, out, form, depth + 1);
     }
-    if let (Some(width), false) = (indent, empty) {
+    if let (Some(width), false) = (form.indent, empty) {
         out.push('\n');
         out.extend(std::iter::repeat_n(' ', width * depth));
     }

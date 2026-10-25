@@ -67,7 +67,7 @@ fn write(table: &Table, columns: &[usize], to: &Path, progress: &AtomicU64, canc
                 if i > 0 {
                     line.push(',');
                 }
-                if let Some(text) = values::text(array.as_ref(), row) {
+                if let Some(text) = values::exported(array.as_ref(), row) {
                     field(&mut line, &text);
                 }
             }
