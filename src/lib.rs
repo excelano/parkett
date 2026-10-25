@@ -8,6 +8,7 @@
 
 mod blocks;
 pub mod copy;
+pub mod export;
 mod footer;
 mod table;
 pub mod values;

@@ -10,7 +10,8 @@ use arrow_array::ArrayRef;
 use arrow_schema::DataType;
 use parquet::arrow::ProjectionMask;
 use parquet::arrow::arrow_reader::{
-    ArrowReaderMetadata, ArrowReaderOptions, ParquetRecordBatchReaderBuilder, RowSelection, RowSelector,
+    ArrowReaderMetadata, ArrowReaderOptions, ParquetRecordBatchReader, ParquetRecordBatchReaderBuilder, RowSelection,
+    RowSelector,
 };
 use parquet::file::metadata::PageIndexPolicy;
 
@@ -64,6 +65,26 @@ impl Table {
             footer,
             starts,
         })
+    }
+
+    #[must_use]
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    /// Every row of these top-level columns, in batches of up to `batch` rows.
+    ///
+    /// # Errors
+    ///
+    /// When the file cannot be reopened.
+    pub fn batches(&self, columns: &[usize], batch: usize) -> Result<ParquetRecordBatchReader, String> {
+        let file = File::open(&self.path).map_err(|e| e.to_string())?;
+        let mask = ProjectionMask::roots(self.metadata.parquet_schema(), columns.iter().copied());
+        ParquetRecordBatchReaderBuilder::new_with_metadata(file, self.metadata.clone())
+            .with_projection(mask)
+            .with_batch_size(batch)
+            .build()
+            .map_err(|e| e.to_string())
     }
 
     #[must_use]

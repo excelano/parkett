@@ -10,9 +10,12 @@
 mod grid;
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, mpsc};
+use std::time::Duration;
 
 use eframe::egui::{self, Key, KeyboardShortcut, Modifiers, RichText};
+use parkett::export::Exported;
 use parkett::{Blocks, Field, Footer, Table};
 use parquet::basic::Repetition;
 
@@ -23,6 +26,7 @@ const APP_ID: &str = "parkett";
 const PRODUCT: &str = "Parkett";
 
 const OPEN: KeyboardShortcut = KeyboardShortcut::new(Modifiers::COMMAND, Key::O);
+const EXPORT: KeyboardShortcut = KeyboardShortcut::new(Modifiers::COMMAND, Key::E);
 const DETAILS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::COMMAND, Key::I);
 const QUIT: KeyboardShortcut = KeyboardShortcut::new(Modifiers::COMMAND, Key::Q);
 
@@ -41,7 +45,7 @@ fn main() -> eframe::Result {
         Box::new(move |cc| {
             portal_theme::follow(&cc.egui_ctx);
             let opened = path.map(|path| Opened::open(path, &cc.egui_ctx));
-            Ok(Box::new(App { opened, picking: None, titled: None, details: false }))
+            Ok(Box::new(App { opened, picking: None, titled: None, details: false, saving: None, export: None }))
         }),
     )
 }
@@ -80,6 +84,43 @@ struct App {
     /// The file the window's title names.
     titled: Option<PathBuf>,
     details: bool,
+    /// The save dialog for an export of these columns, answering here.
+    saving: Option<(Vec<usize>, mpsc::Receiver<Option<PathBuf>>)>,
+    export: Option<Export>,
+}
+
+/// An export running on its own thread, or the word it finished with.
+/// DESIGN.md §7.
+struct Export {
+    to: PathBuf,
+    rows: u64,
+    progress: Arc<AtomicU64>,
+    cancel: Arc<AtomicBool>,
+    finished: mpsc::Receiver<Result<Exported, String>>,
+    outcome: Option<Result<Exported, String>>,
+}
+
+impl Export {
+    fn start(table: &Arc<Table>, columns: Vec<usize>, to: PathBuf, ctx: &egui::Context) -> Self {
+        let (progress, cancel) = (Arc::new(AtomicU64::new(0)), Arc::new(AtomicBool::new(false)));
+        let (send, finished) = mpsc::channel();
+        let (table_, to_, progress_, cancel_, ctx) = (table.clone(), to.clone(), progress.clone(), cancel.clone(), ctx.clone());
+        std::thread::spawn(move || {
+            let _ = send.send(parkett::export::csv(&table_, &columns, &to_, &progress_, &cancel_));
+            ctx.request_repaint();
+        });
+        Self { to, rows: table.rows(), progress, cancel, finished, outcome: None }
+    }
+
+    fn running(&self) -> bool {
+        self.outcome.is_none()
+    }
+}
+
+impl Drop for Export {
+    fn drop(&mut self) {
+        self.cancel.store(true, Ordering::Relaxed);
+    }
 }
 
 impl eframe::App for App {
@@ -94,6 +135,10 @@ impl eframe::App for App {
         if ctx.input_mut(|i| i.consume_shortcut(&OPEN)) {
             self.pick(ctx);
         }
+        if ctx.input_mut(|i| i.consume_shortcut(&EXPORT)) {
+            self.save(ctx, false);
+        }
+        self.poll_export(ctx);
         if ctx.input_mut(|i| i.consume_shortcut(&DETAILS)) {
             self.details = !self.details;
         }
@@ -107,6 +152,16 @@ impl eframe::App for App {
                 ui.menu_button("File", |ui| {
                     if ui.add(egui::Button::new("Open…").shortcut_text(ctx.format_shortcut(&OPEN))).clicked() {
                         self.pick(ctx);
+                    }
+                    ui.separator();
+                    let can = self.can_export();
+                    let all = egui::Button::new("Export as CSV…").shortcut_text(ctx.format_shortcut(&EXPORT));
+                    if ui.add_enabled(can, all).clicked() {
+                        self.save(ctx, false);
+                    }
+                    let some = self.selected_columns().is_some();
+                    if ui.add_enabled(can && some, egui::Button::new("Export selected columns as CSV…")).clicked() {
+                        self.save(ctx, true);
                     }
                     ui.separator();
                     if ui.add(egui::Button::new("Quit").shortcut_text(ctx.format_shortcut(&QUIT))).clicked() {
@@ -148,6 +203,7 @@ impl eframe::App for App {
             }
         };
 
+        export_strip(ui, &mut self.export);
         if self.details {
             egui::Panel::right("details").resizable(true).default_size(380.0).show(ui, |ui| {
                 egui::ScrollArea::both().auto_shrink([false, false]).show(ui, |ui| details(ui, &view.table.footer));
@@ -161,6 +217,70 @@ impl eframe::App for App {
 }
 
 impl App {
+    fn view(&self) -> Option<&View> {
+        self.opened.as_ref().and_then(|o| o.view.as_ref().ok())
+    }
+
+    fn can_export(&self) -> bool {
+        self.view().is_some() && self.saving.is_none() && !self.export.as_ref().is_some_and(Export::running)
+    }
+
+    /// The columns a selection spans, when it spans fewer than the file has.
+    fn selected_columns(&self) -> Option<Vec<usize>> {
+        let view = self.view()?;
+        let columns = view.grid.selection?.columns();
+        (columns.end() - columns.start() + 1 < view.table.names.len()).then(|| columns.collect())
+    }
+
+    fn save(&mut self, ctx: &egui::Context, selected: bool) {
+        if !self.can_export() {
+            return;
+        }
+        let Some(view) = self.view() else { return };
+        let columns = if selected {
+            let Some(columns) = self.selected_columns() else { return };
+            columns
+        } else {
+            (0..view.table.names.len()).collect()
+        };
+        let source = view.table.path();
+        let name = format!("{}.csv", source.file_stem().map_or_else(|| "export".into(), |s| s.to_string_lossy()));
+        let folder = source.parent().map(Path::to_path_buf);
+        let (send, receive) = mpsc::channel();
+        let ctx = ctx.clone();
+        std::thread::spawn(move || {
+            let mut dialog = rfd::FileDialog::new()
+                .set_title("Export as CSV")
+                .set_file_name(name)
+                .add_filter("CSV files", &["csv"]);
+            if let Some(folder) = folder {
+                dialog = dialog.set_directory(folder);
+            }
+            let _ = send.send(dialog.save_file());
+            ctx.request_repaint();
+        });
+        self.saving = Some((columns, receive));
+    }
+
+    fn poll_export(&mut self, ctx: &egui::Context) {
+        let answer = self.saving.as_ref().and_then(|(_, receive)| receive.try_recv().ok());
+        if let Some(answer) = answer
+            && let Some((columns, _)) = self.saving.take()
+            && let (Some(to), Some(view)) = (answer, self.view())
+        {
+            self.export = Some(Export::start(&view.table, columns, to, ctx));
+        }
+        if let Some(export) = &mut self.export
+            && export.running()
+        {
+            if let Ok(outcome) = export.finished.try_recv() {
+                export.outcome = Some(outcome);
+            } else {
+                ctx.request_repaint_after(Duration::from_millis(100));
+            }
+        }
+    }
+
     fn pick(&mut self, ctx: &egui::Context) {
         if self.picking.is_some() {
             return;
@@ -192,6 +312,39 @@ impl App {
             ctx.send_viewport_cmd(egui::ViewportCommand::Title(title));
             self.titled = path;
         }
+    }
+}
+
+/// An export's progress while it runs, and what became of it after.
+fn export_strip(ui: &mut egui::Ui, export: &mut Option<Export>) {
+    let Some(running) = export else { return };
+    let name = running.to.file_name().map_or_else(String::new, |n| n.to_string_lossy().into_owned());
+    let mut dismiss = false;
+    egui::Panel::bottom("export").show(ui, |ui| {
+        ui.horizontal(|ui| match &running.outcome {
+            None => {
+                let done = running.progress.load(Ordering::Relaxed);
+                #[allow(clippy::cast_precision_loss)]
+                let fraction = if running.rows == 0 { 1.0 } else { done as f32 / running.rows as f32 };
+                ui.label(format!("Exporting to {name}"));
+                ui.add(egui::ProgressBar::new(fraction).desired_width(240.0));
+                ui.label(RichText::new(format!("{} of {} rows", grouped(done), grouped(running.rows))).weak());
+                if ui.button("Cancel").clicked() {
+                    running.cancel.store(true, Ordering::Relaxed);
+                }
+            }
+            Some(outcome) => {
+                match outcome {
+                    Ok(Exported::Written) => ui.label(format!("Exported {} rows to {}", grouped(running.rows), running.to.display())),
+                    Ok(Exported::Cancelled) => ui.label("Export cancelled; nothing was written."),
+                    Err(error) => ui.label(RichText::new(format!("The export failed: {error}")).color(ui.visuals().warn_fg_color)),
+                };
+                dismiss = ui.button("Dismiss").clicked();
+            }
+        });
+    });
+    if dismiss {
+        *export = None;
     }
 }
 

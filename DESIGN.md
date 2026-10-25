@@ -153,12 +153,19 @@ Copy hands one cell over as its text and a range as tab-separated rows, which a
 spreadsheet pastes as cells: a null is an empty field, and a field holding a
 tab, a line break or a quote is quoted. A copy decodes what it needs at once, so
 it is bounded: a range of more than a million cells is refused with a word in
-the pane beneath the grid, since a range that large is an export. Export writes the
-file, or the columns selected, as CSV with a header row, each value in the form
-§5 shows it: a nested value as JSON and binary as hexadecimal, which is also
-what this2that's `parquet2csv` writes, so the two exports of one file agree. It is a new file chosen
-in a save dialog, it never replaces the one that was opened, and Comma is the
-application that opens it.
+the pane beneath the grid, since a range that large is an export.
+
+Export writes every row of the file, or of the columns a selection spans, as
+CSV with a header row: comma-separated, quoted where a value holds a comma, a
+quote or a line break, lines ended by CRLF, as RFC 4180 has it. Each value is
+in the form §5 shows it and a null is an empty field, so a nested value is JSON
+and binary is hexadecimal, the conventions this2that's `parquet2csv` also
+keeps. The destination is chosen in a save dialog and cannot be the file being
+read. The CSV is written beside it under a hidden name and moved into place
+only once it is whole, so an export that fails or is cancelled leaves whatever
+was there as it was. It runs on its own thread, with its progress in rows and a
+Cancel beneath the grid, and Comma is the application that opens what it
+writes.
 
 ## §8 What it does not do
 
