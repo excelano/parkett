@@ -24,13 +24,8 @@ The library, `src/lib.rs` and its modules, reads files and knows nothing of a wi
 The file is read by the `parquet` crate from `arrow-rs`, with its Arrow reader
 and its default codecs. Snappy, gzip, LZ4 and Brotli are pure Rust. Zstandard
 is the C library, compiled by `zstd-sys` and linked statically, and it is the
-one C dependency: the fleet prefers pure Rust (`~/notes/pure_rust_preference.md`)
-and this is the trade taken against that. A Rust decoder decodes the same bytes,
-and on a file of millions of rows a jump into a stretch not yet read costs
-about four times as long through it as through the C library, with the cost of
-keeping it patched in beneath `parquet`. What the C library costs here is a C
-compiler on each machine that builds, which each already has, and a rebuild
-for a Zstandard security fix.
+one C dependency. What it costs is a C compiler on each machine that builds,
+which each already has, and a rebuild for a Zstandard security fix.
 
 Two checks hold the build to that, because neither alone does. The artefact's
 dynamic dependencies:
@@ -80,9 +75,8 @@ block are unaffected.
 
 ## §4 The grid
 
-The grid is the one `xods` draws, carried into this repository rather than
-depended on: `odox-ui` brings the OpenDocument model with it, and the parts that
-apply here are the painting pattern, not the code that reads a sheet. Cells are
+The grid is painted the way `xods` paints its sheet, with the pattern carried
+into this repository rather than the code depended on. Cells are
 painted for the viewport and no others, columns are measured once into a table
 of where each begins, a pointer finds a column by searching that table, and a
 column is resized by dragging its header's edge.

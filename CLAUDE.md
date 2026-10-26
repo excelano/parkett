@@ -29,6 +29,6 @@ Every sentence a person reads goes through `t`, `tn` or `tc` as one string liter
 what Parkett shows of a file's own content is never translated (`DESIGN.md` §9). Tests
 write the files they read with the `parquet` crate rather than committing
 third-party test files, and each test's doc comment says what defect it catches.
-A `cargo update` or an `eframe` bump off winit 0.30.13 stops `[patch.crates-io]`
-applying, which is the moment to check whether that winit release carries the
-`private-apple-apis` gate.
+A `cargo update` or an `eframe` bump that moves winit off the version
+`[patch.crates-io]` pins stops the patch applying, which is the moment to check
+whether that winit release carries the `private-apple-apis` gate.
