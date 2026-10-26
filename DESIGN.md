@@ -16,6 +16,10 @@ an export (§7), which is a new file in another format.
 
 It is one binary over egui and eframe, packaged for apt, the Microsoft Store
 and the Mac App Store the way the fleet's other egui applications are.
+On Windows it draws through Direct3D 12 alone, unless `WGPU_BACKEND` names
+another backend. wgpu's default set includes Vulkan, and creating a Vulkan
+instance loads every installed Vulkan driver into the process, where a faulty
+one ends it before a window opens.
 The library, `src/lib.rs` and its modules, reads files and knows nothing of a window, and is
 `forbid(unsafe_code)`; `src/main.rs` is the window.
 

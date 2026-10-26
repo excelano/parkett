@@ -43,6 +43,21 @@ fn window_icon() -> Option<egui::IconData> {
     Some(egui::IconData { rgba: image.rgba_data().to_vec(), width: image.width(), height: image.height() })
 }
 
+#[cfg(target_os = "windows")]
+fn wgpu_options() -> eframe::egui_wgpu::WgpuConfiguration {
+    use eframe::wgpu::Backends;
+    let mut config = eframe::egui_wgpu::WgpuConfiguration::default();
+    if let eframe::egui_wgpu::WgpuSetup::CreateNew(create_new) = &mut config.wgpu_setup {
+        create_new.instance_descriptor.backends = Backends::from_env().unwrap_or(Backends::DX12);
+    }
+    config
+}
+
+#[cfg(not(target_os = "windows"))]
+fn wgpu_options() -> eframe::egui_wgpu::WgpuConfiguration {
+    eframe::egui_wgpu::WgpuConfiguration::default()
+}
+
 const OPEN: KeyboardShortcut = KeyboardShortcut::new(Modifiers::COMMAND, Key::O);
 const EXPORT: KeyboardShortcut = KeyboardShortcut::new(Modifiers::COMMAND, Key::E);
 const DETAILS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::COMMAND, Key::I);
@@ -69,7 +84,7 @@ fn main() -> eframe::Result {
     // the bundle's on macOS; an empty one declines it.
     #[cfg(target_os = "macos")]
     let viewport = viewport.with_icon(egui::IconData::default());
-    let options = eframe::NativeOptions { viewport, ..Default::default() };
+    let options = eframe::NativeOptions { viewport, wgpu_options: wgpu_options(), ..Default::default() };
 
     // Before eframe: macOS sends the document that launched the application
     // before eframe's creation closure runs.
