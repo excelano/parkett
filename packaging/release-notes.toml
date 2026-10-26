@@ -5,14 +5,14 @@
 # Author: David M. Anderson
 # Built with AI assistance (Claude, Anthropic)
 
-version = "0.1.0"
+version = "0.1.1"
 
 [locales."en-us"]
 whats-new = """
-The first release. Parkett opens an Apache Parquet file as a grid that scrolls through millions of rows, shows the file's schema, row groups and statistics beside it, copies a selection as tab-separated rows and exports CSV.
+The first release. Parkett opens an Apache Parquet file as a grid that scrolls through millions of rows, shows the file's schema, row groups and statistics beside it, copies a selection as tab-separated rows and exports CSV. On Windows it draws through Direct3D 12, so a faulty Vulkan graphics driver cannot stop it from starting.
 """
 
 [locales."de-de"]
 whats-new = """
-Die erste Version. Parkett öffnet eine Apache-Parquet-Datei als Raster, das durch Millionen Zeilen scrollt, zeigt Schema, Zeilengruppen und Statistiken der Datei daneben, kopiert eine Auswahl als tabulatorgetrennte Zeilen und exportiert CSV.
+Die erste Version. Parkett öffnet eine Apache-Parquet-Datei als Raster, das durch Millionen Zeilen scrollt, zeigt Schema, Zeilengruppen und Statistiken der Datei daneben, kopiert eine Auswahl als tabulatorgetrennte Zeilen und exportiert CSV. Unter Windows zeichnet Parkett über Direct3D 12, sodass ein fehlerhafter Vulkan-Grafiktreiber den Start nicht verhindern kann.
 """
