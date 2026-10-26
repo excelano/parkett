@@ -1,3 +1,14 @@
+parkett (0.1.1) unstable; urgency=medium
+
+  * Release notes for 0.1.1
+  * Draw through Direct3D 12 alone on Windows
+  * Screenshot scripts drop the generated-by-ship line
+  * CLAUDE.md and DESIGN.md state the winit pin and the C dependency without the trade-off narrative; check-imports.ps1 header
+  * Name the German Mac listing Parkett: Parquet-Betrachter
+  * README: install from apt or with cargo
+
+ -- David M. Anderson <david.anderson@excelano.com>  Mon, 26 Oct 2026 13:10:47 -0500
+
 parkett (0.1.0) unstable; urgency=medium
 
   * First release: a Parquet file as a grid, its footer as a panel, copy as
