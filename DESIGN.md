@@ -31,7 +31,7 @@ is the C library, compiled by `zstd-sys` and linked statically, and it is the
 one C dependency. What it costs is a C compiler on each machine that builds,
 which each already has, and a rebuild for a Zstandard security fix.
 
-Two checks hold the build to that, because neither alone does. The artefact's
+Two checks hold the build to that, because neither alone does. The artifact's
 dynamic dependencies:
 
     objdump -p "$target/release/parkett" | grep NEEDED
@@ -163,7 +163,7 @@ Parquet file's schema, and a program reading the CSV takes the times as UTC. A n
 nested value is JSON and binary is hexadecimal, the conventions this2that's
 `parquet2csv` also keeps. The destination is chosen in a save dialog and cannot be the file being
 read. The CSV is written beside it under a hidden name and moved into place
-only once it is whole, so an export that fails or is cancelled leaves whatever
+only once it is whole, so an export that fails or is canceled leaves whatever
 was there as it was. It runs on its own thread, with its progress in rows and a
 Cancel beneath the grid, and Comma is the application that opens what it
 writes.
@@ -179,11 +179,11 @@ Arrow, ORC or Avro files.
 
 ## §9 Language
 
-Every sentence Parkett shows is looked up in a `.po` catalogue compiled into
+Every sentence Parkett shows is looked up in a `.po` catalog compiled into
 the binary and read by `potext`, so the same mechanism works in a `.deb`, an
 MSIX package and a crate with nothing installed beside it. The language is the
 one the platform names, or `POTEXT_LANG` when it is set, and a language with no
-catalogue is English. A message whose English has changed since it was
+catalog is English. A message whose English has changed since it was
 translated is marked fuzzy by `msgmerge`, and `potext` will not show a fuzzy
 entry, so a stale translation falls back to English rather than saying
 something the window no longer means.
@@ -195,8 +195,8 @@ pointed the way the language writes them, through two messages keyed by
 context, so German shows 5.000.000 and 1,5 MB.
 
 `po/update-po.sh` re-reads the sources into `po/parkett.pot` and merges it into
-each catalogue; it runs after any change to a sentence a person reads.
+each catalog; it runs after any change to a sentence a person reads.
 `po/pseudo.sh` writes `po/en-x-pseudo.po`, every message accented, bracketed
 and 40% longer, which debug builds alone compile in: a string still plain
-English never reached the catalogue, and a cut-off label was laid out to the
+English never reached the catalog, and a cut-off label was laid out to the
 width of English.

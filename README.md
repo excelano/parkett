@@ -49,6 +49,6 @@ or open the application and choose a file with File, Open.
 
 `DESIGN.md` is the authority on how Parkett is built.
 
-## Licence
+## License
 
-MIT. See `LICENSE`.
+MIT. See [LICENSE](LICENSE).

@@ -18,8 +18,8 @@ answer against the product. 500 characters, newlines counted.
 
     Category                  Developer tools (both stores)
     Copyright and trademark   Excelano LLC
-    Additional licence terms  blank; the application is MIT and the
-                              repository carries the licence
+    Additional license terms  blank; the application is MIT and the
+                              repository carries the license
     Privacy policy            https://excelano.com/legal/#parkett
     Age rating                no objectionable content of any kind
     App Privacy (Apple)       Data Not Collected
