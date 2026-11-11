@@ -22,12 +22,6 @@ On Debian and Ubuntu, from the Excelano apt repository:
 curl -fsSL https://excelano.com/apt/setup.sh | sudo sh && sudo apt install parkett
 ```
 
-With cargo, which builds it and needs a C compiler for Zstandard:
-
-```
-cargo install parkett
-```
-
 https://excelano.com/parkett/ is the product page for every platform.
 
 ## Build

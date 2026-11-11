@@ -1,10 +1,9 @@
 [package]
 name = "parkett"
 description = "View Apache Parquet files"
+publish = false
 homepage = "https://excelano.com/parkett/"
 readme = "README.md"
-keywords = ["parquet", "viewer", "data", "gui", "egui"]
-categories = ["gui", "visualization"]
 version = "0.1.1"
 edition = "2024"
 authors = ["David M. Anderson"]
